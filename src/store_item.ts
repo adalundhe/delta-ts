@@ -1,4 +1,15 @@
-export interface StoreItem<S, V> {
-    value: V;
-    update: (prev: V) => (next: V) => V | ((prev: V) => (next: V) => Promise<V>)
+export type StoreItem<S extends{
+    [Property in keyof S]: S[Property]
+}>  = {
+    [key: string]: S[keyof S] | (
+    (
+        prev: S[keyof S]
+    ) => (
+        next: S[keyof S]
+    ) => S[keyof S]) | (
+    (
+        prev: S[keyof S]
+    ) => (
+        next: S[keyof S]
+    ) => Promise<S[keyof S]>)
 }

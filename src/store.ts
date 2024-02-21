@@ -1,89 +1,83 @@
 import {StoreItem} from './store_item'
+import  { 
+    StoreApi, 
+    StoreData, 
+    StoreMutations, 
+    StoreKey,
+    StoreValue,
+    StoreTransform,
+    StoreTransformSet,
+    StoreTransformSeries
+} from './types'
 
 let listeners: Array<
     () => void
 > = []
 
 
-class Store<T extends {
-    [Property in keyof T]: StoreItem<T, T[Extract<keyof T, string>]['value']>
-}>{
+class Store<T>{
 
-    private state: {
-        [Property in keyof T]: T[Property]['value']
-    };
-    private mutators: {
-        [Property in keyof T]: (
-            prev: T[Extract<keyof T, string>]['value']
-        ) => (
-            next: T[Extract<keyof T, string>]['value']
-        ) => T[Extract<keyof T, string>]['value'] | (
-        (
-            prev: T[Extract<keyof T, string>]['value']
-        ) => (
-            next: T[Extract<keyof T, string>]['value']
-        ) => Promise<T[Extract<keyof T, string>]['value']>)
-    }
+    private state: StoreData<T>;
+    private mutators: StoreMutations<T>
 
-    private constructor(state: {
-        [Property in keyof T]: StoreItem<T, T[Extract<keyof T, string>]['value']>
-    }){
+    private constructor(state: StoreApi<T>){
         this.state = Object.create({})
         this.mutators = Object.create({})
         for (const key in state){
-            this.mutators[key] = state[key].update
-            this.state[key] = state[key].value
+
+            this.mutators = Object.assign({}, this.mutators, {
+                [key]: state[key].update
+            })
+
+            this.state = Object.assign({}, this.state, {
+                [key]: state[key].value
+            })
+
         }
 
     }
     
-    static init<
-        T extends {
-        [Property in keyof T]: T[Property]
-    }>(
+    static init<T>(
         state: T
     ) {
         return new Store<
             T
-        >(state)
-    }
-
-    getInitialState(){
-        return this.state
+        >(state as StoreApi<T>)
     }
     
     get<
-        K extends keyof T
+        K extends keyof StoreData<T>
     >(key: K){
-        return this.state[key] as T[K]['value'];
+        return this.state[key];
     }
 
-    mutate(next: Partial<{
-        [Property in keyof T]: T[Property]['value']
-    }>){
-        for (const key in next){
+    mutate(next: Partial<StoreData<T>>){
 
-            this.createMutation({
-                key,
-                next: next[key]
-            })
+
+        for (const cacheKey in next){
+
+            const key = cacheKey as StoreKey<T>;
+             if (key){
+                this.createMutation({
+                    key,
+                    next: next[key] as StoreValue<T>
+                })
+            }
             
         }
 
         return this.getState()
     }
 
-    async mutateAsync(next: Partial<{
-        [Property in keyof T]: T[Property]['value']
-    }>){
+    async mutateAsync(next: Partial<StoreData<T>>){
 
-        const keys = Object.keys(next) as Array<keyof T>;
+        const keys = Object.keys(next) as Array<Extract<keyof T, string>>;
 
         await Promise.all([
             ...keys.map<Promise<void>>((key) => {
                 return this.createMutationAsync({
                     key,
-                    next: next[key]
+                    next: next[key] as StoreValue<T>
                 })
             })
         ])
@@ -91,16 +85,12 @@ class Store<T extends {
         return this.getState()
     }
 
-    transform(next: Partial<{
-        [Property in keyof T]: (
-            prev: T[Property]['value']
-        ) => T[Property]['value']
-    }>){
+    transform(next: StoreTransformSet<T>){
         
         for (const key in next){
             this.createTransform({
                 key,
-                next: next[key]
+                next: next[key] as StoreTransform<T>
             })
         }
 
@@ -109,8 +99,8 @@ class Store<T extends {
 
     async transformAsync(next: Partial<{
         [Property in keyof T]: (
-            prev: T[Property]['value']
-        ) => Promise<T[Property]['value']>
+            prev: T[Property][keyof T[Property]]
+        ) => Promise<T[Property][keyof T[Property]]>
     }>){
 
         const keys = Object.keys(next) as Array<keyof T>;
@@ -128,16 +118,12 @@ class Store<T extends {
         
     }
 
-    series(next: Partial<{
-        [Property in keyof T]: Array<(
-            prev: T[Property]['value']
-        ) => T[Property]['value']>
-    }>){
+    series(next: StoreTransformSeries<T>){
         for (const key in next){
             
             (next[key] ?? []).map(transform => this.createTransform({
                 key,
-                next: transform
+                next: transform as StoreTransform<T>
             }))
 
         }
@@ -148,8 +134,8 @@ class Store<T extends {
     async seriesAsync(next: Partial<{
         [Property in keyof T]: Array<
             (
-                prev: T[Property]['value']
-            ) => Promise<T[Property]['value']>
+                prev: T[Property][keyof T[Property]]
+            ) => Promise<T[Property][keyof T[Property]]>
         >
     }>){
 
@@ -173,14 +159,10 @@ class Store<T extends {
     norm({
         transforms
     }: {
-        transforms: Array<
-            (
-                prev: T[keyof T]['value']
-            ) => T[keyof T]['value']
-        >
+        transforms: Array<StoreTransform<T>>
     }){
 
-        const keys = Object.keys(this.state) as Array<keyof T>;
+        const keys = Object.keys(this.state) as Array<Extract<keyof T, string>>;
         keys.map(key => {
             transforms.map(transform => this.createTransform({
                 key,
@@ -196,8 +178,8 @@ class Store<T extends {
     }: {
         transforms: Array<
             (
-                prev: T[keyof T]['value']
-            ) => Promise<T[keyof T]['value']>
+                prev: T[keyof T][keyof T[keyof T]]
+            ) => Promise<T[keyof T][keyof T[keyof T]]>
         >
     }){
         const keys = Object.keys(this.state) as Array<keyof T>;
@@ -215,22 +197,20 @@ class Store<T extends {
 
     }
 
-    private createTransform<
-        K extends keyof T
-    >({
+    private createTransform({
         key,
         next
-    }: Partial<{
-        key: K
-        next: (
-            prev: T[keyof T]['value']
-        ) => T[keyof T]['value']
-    }>){
+    }: {
+        key: StoreKey<T>,
+        next: StoreTransform<T>
+    }){
 
-        const prev = this.state[key as K];
+        const prev = this.state[key];
         this.state  = {
             ...this.state,
-            [key as K]: next ? next(prev) : prev
+            [key as Extract<keyof T, string>]: next ? next(
+                prev
+            ) : prev
         }
 
         this.emitChange()
@@ -244,54 +224,60 @@ class Store<T extends {
     }: Partial<{
         key: K
         next: (
-            prev: T[keyof T]['value']
-        ) => T[keyof T]['value']
+            prev: T[keyof T][keyof T[keyof T]]
+        ) => Promise<T[keyof T][keyof T[keyof T]]>
     }>){
 
-        const prev = this.state[key as K];
+        const prev = this.state[key as keyof T];
         this.state  = {
             ...this.state,
-            [key as K]: next ? await next(prev) : prev
+            [key as K]: next ? await next(
+                prev as T[keyof T][keyof T[keyof T]]
+            ) : prev
         }
 
         this.emitChange()
     }
 
-    private createMutation<
-        K extends keyof T
-    >({
+    private createMutation({
         key,
         next
-    }: Partial<{
-        key: K
-        next: T[K]['value']
-    }>){
-        const mutator = this.mutators[key as K];
-        const prev = this.state[key as K];
+    }: {
+        key: StoreKey<T>
+        next: StoreValue<T>
+    }){
+        const mutator = this.mutators[key];
+        const prev = this.state[key];
 
         this.state  = {
             ...this.state,
-            [key as K]: mutator(prev)(next)
+            [key as Extract<keyof T, string>]: mutator( 
+                prev
+            )(
+                next
+            )
         }
 
         this.emitChange()
     }
 
-    private async createMutationAsync<
-        K extends keyof T
-    >({
+    private async createMutationAsync({
         key,
         next
-    }: Partial<{
-        key: K
-        next: T[K]['value']
-    }>){
-        const mutator = this.mutators[key as K];
-        const prev = this.state[key as K];
+    }: {
+        key: StoreKey<T>
+        next: StoreValue<T>
+    }){
+        const mutator = this.mutators[key];
+        const prev = this.state[key as keyof T];
 
         this.state  = {
             ...this.state,
-            [key as K]: await mutator(prev)(next)
+            [key as Extract<keyof T, string>]: await mutator(
+                prev
+            )(
+                next
+            )
         }
 
         this.emitChange()
@@ -305,7 +291,13 @@ class Store<T extends {
     }
 
     getState() {
-        return this.state;
+        return this.state as {
+            [Property in keyof T]: T[Property][keyof T[Property]]
+        };
+    }
+
+    getMutators (){
+        return this.mutators as StoreMutations<T>
     }
 
     private emitChange() {

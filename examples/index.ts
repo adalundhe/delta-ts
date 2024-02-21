@@ -1,5 +1,4 @@
 import { Store } from '../src/store'
-import { useStore } from '../src/react'
 
 const store = Store.init({
     boop: {
