@@ -1,0 +1,32 @@
+{
+  "name": "delta-ts",
+  "version": "1.0.0",
+  "description": "A modern version of the Delta state manager - written for TS and with the use of React Hooks.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/scorbettUM/delta-ts.git"
+  },
+  "keywords": [
+    "state-manager",
+    "react"
+  ],
+  "author": "Ada Lundhe",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/scorbettUM/delta-ts/issues"
+  },
+  "homepage": "https://github.com/scorbettUM/delta-ts#readme",
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@types/react": "^18.2.57",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
