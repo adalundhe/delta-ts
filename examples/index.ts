@@ -9,16 +9,19 @@ const store = Store.init({
 })
 
 
-const {
-    boop
-} = useStore(store)
+// const {
+//     boop
+// } = useStore(store)
 
 store.mutate({
     boop: [0]
 })
 
 store.transform({
-    boop: (prev) => [...prev, 1]
+    boop: (prev: number[]) => [
+        1,
+        ...prev
+    ]
 })
 
 store.norm({
@@ -34,7 +37,9 @@ store.norm({
     ]
 })
 
-store.series({
+const {
+    boop
+} = store.series({
     boop: [
         (prev: number[]) => [
             4,

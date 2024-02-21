@@ -216,9 +216,14 @@ class Store<T extends {
         prev: T[K]['value']
     }>){
 
+        const segment = {
+            ...this.state[key as K],
+            value: next ? next(prev) : prev
+        }
+
         this.state  = {
             ...this.state,
-            [key as K]: next ? next(prev) : prev
+            [key as K]: segment
         }
 
         this.emitChange()
@@ -238,9 +243,14 @@ class Store<T extends {
         prev: T[K]['value']
     }>){
 
+        const segment = {
+            ...this.state[key as K],
+            value: next ? await next(prev) : prev
+        }
+
         this.state  = {
             ...this.state,
-            [key as K]: next ? await next(prev) : prev
+            [key as K]: segment
         }
 
         this.emitChange()
@@ -257,10 +267,14 @@ class Store<T extends {
         next: T[K]['value'],
         prev: T[K]['value']
     }>){
-        
+        const segment = {
+            ...this.state[key as K],
+            value: this.state[key as K].update(prev)(next)
+        }
+
         this.state  = {
             ...this.state,
-            [key as K]: this.state[key as K].update(prev)(next)
+            [key as K]: segment
         }
 
         this.emitChange()
@@ -277,10 +291,14 @@ class Store<T extends {
         next: T[K]['value'],
         prev: T[K]['value']
     }>){
+        const segment = {
+            ...this.state[key as K],
+            value: await this.state[key as K].update(prev)(next)
+        }
 
         this.state  = {
             ...this.state,
-            [key as K]: await this.state[key as K].update(prev)(next)
+            [key as K]: segment
         }
 
         this.emitChange()
@@ -294,7 +312,17 @@ class Store<T extends {
     }
 
     getState() {
-        return this.state;
+
+        const state: {
+            [Property in keyof T]:  T[Property]['value']
+        } = Object.assign({})
+
+        for (const key in this.state){
+            state[key] = this.state[key].value
+
+        }
+
+        return state;
     }
 
     private emitChange() {
