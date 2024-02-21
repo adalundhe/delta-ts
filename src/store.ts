@@ -110,7 +110,6 @@ class Store<T extends {
         
     }
 
-
     series(next: Partial<{
         [Property in keyof T]: Array<(
             prev: T[Property]['value']
