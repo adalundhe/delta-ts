@@ -315,7 +315,7 @@ class Store<T extends {
 
         const state: {
             [Property in keyof T]:  T[Property]['value']
-        } = Object.assign({})
+        } = Object.create({})
 
         for (const key in this.state){
             state[key] = this.state[key].value

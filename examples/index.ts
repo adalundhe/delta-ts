@@ -4,7 +4,11 @@ import { useStore } from '../src/react_store'
 const store = Store.init({
     boop: {
         value: [] as number[],
-        update: (prev: number[]) => (next: number[]) => prev.concat(next)
+        update: (
+            prev: number[]
+        ) => (
+            next: number[]
+        ) => prev.concat(next)
     }
 })
 
@@ -51,6 +55,5 @@ const {
         ]
     ]
 })
-
 
 console.log(boop)
