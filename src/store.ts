@@ -8,42 +8,15 @@ let listeners: Array<
 class Store<T extends {
     [Property in keyof T]: StoreItem<T, T[Extract<keyof T, string>]['value']>
 }>{
-    private keys: {
-        [Property in keyof T]: {
-            key: Extract<keyof T, string>
-        }
-    }
-    private state: WeakMap<
-        {
 
-            key: Extract<keyof T, string>
-        },
-        StoreItem<T, T[Extract<keyof T, string>]['value']>
-    >;
+    private state: {
+        [Property in keyof T]:  StoreItem<T, T[Property]['value']>
+    };
     private constructor(state: {
         [Property in keyof T]: StoreItem<T, T[Extract<keyof T, string>]['value']>
     }){
 
-        this.state = new WeakMap();
-        this.keys = Object.assign({});
-        for (const key in state){
-
-            const refKey = {
-                key: key
-            }
-
-            this.state.set(
-                refKey,
-                state[key]
-            );
-
-            this.keys = Object.assign(
-                this.keys,
-                {
-                    [key]: refKey
-                }
-            );
-        }
+        this.state = state;
     }
     
     static init<
@@ -60,42 +33,37 @@ class Store<T extends {
     get<
         K extends keyof T
     >(key: K){
-        const cacheKey = this.keys[key];
-        return cacheKey ? this.state.get(cacheKey)?.value as T[K]['value'] : undefined;
+        return this.state[key].value as T[K]['value'];
     }
 
     mutate(next: Partial<{
         [Property in keyof T]: T[Property]['value']
     }>){
         for (const key in next){
-            const cacheKey = this.keys[key];
-            const ref = this.state.get(cacheKey);
 
-            ref && this.createMutation({
-                key: cacheKey,
-                item: ref,
-                next: next[key]
+            this.createMutation({
+                key,
+                next: next[key],
+                prev: this.state[key]['value']
             })
+            
         }
 
         return this.getState()
     }
 
-    async mutateAsync<
-        K extends keyof T
-    >(next: Partial<{
+    async mutateAsync(next: Partial<{
         [Property in keyof T]: T[Property]['value']
     }>){
 
-        await Promise.all([
-            ...Object.keys(next).map((key) => {
-                const cacheKey = this.keys[key as K];
-                const ref = this.state.get(cacheKey);
+        const keys = Object.keys(next) as Array<keyof T>;
 
-                return ref && this.createMutationAsync({
-                    key: cacheKey,
-                    item: ref,
-                    next: next[key as K]
+        await Promise.all([
+            ...keys.map<Promise<void>>((key) => {
+                return this.createMutationAsync({
+                    key,
+                    next: next[key],
+                    prev: this.state[key]['value']
                 })
             })
         ])
@@ -110,40 +78,30 @@ class Store<T extends {
     }>){
         
         for (const key in next){
-            const cacheKey = this.keys[key];
-            const ref = this.state.get(cacheKey);
-
-            ref && this.createTransform({
-                key: cacheKey,
-                item: ref,
-                next: next[key] as (
-                    prev: T[keyof T]['value']
-                ) => T[keyof T]['value']
+            this.createTransform({
+                key,
+                next: next[key],
+                prev: this.state[key]['value']
             })
         }
 
         return this.getState()
     }
 
-    async transformAsync<
-        K extends keyof T
-    >(next: Partial<{
+    async transformAsync(next: Partial<{
         [Property in keyof T]: (
             prev: T[Property]['value']
         ) => Promise<T[Property]['value']>
     }>){
 
-        await Promise.all([
-            ...Object.keys(next).map((key) => {
-                const cacheKey = this.keys[key as K];
-                const ref = this.state.get(cacheKey);
+        const keys = Object.keys(next) as Array<keyof T>;
 
-                return ref && this.createTransformAsync({
-                    key: cacheKey,
-                    item: ref,
-                    next: next[key as K] as  (
-                        prev: T[keyof T]['value']
-                    ) => Promise<T[keyof T]['value']>
+        await Promise.all([
+            ...keys.map((key) => {
+                return this.createTransformAsync({
+                    key,
+                    next: next[key],
+                    prev: this.state[key]['value']
                 })
             })
         ])
@@ -159,26 +117,19 @@ class Store<T extends {
         ) => T[Property]['value']>
     }>){
         for (const key in next){
-            const cacheKey = this.keys[key];
-            const ref = this.state.get(cacheKey);
-            const transforms = next[key] ?? []
+            
+            (next[key] ?? []).map(transform => this.createTransform({
+                key,
+                next: transform,
+                prev: this.state[key]['value']
+            }))
 
-            for (const transform of transforms){
-                ref && this.createTransform({
-                    key: cacheKey,
-                    item: ref,
-                    next: transform
-                })
-
-            }
         }
 
         return this.getState()
     }
 
-    async seriesAsync<
-        K extends keyof T
-    >(next: Partial<{
+    async seriesAsync(next: Partial<{
         [Property in keyof T]: Array<
             (
                 prev: T[Property]['value']
@@ -186,20 +137,17 @@ class Store<T extends {
         >
     }>){
 
-        await Promise.all([
-            ...Object.keys(next).map((key) => {
-                const cacheKey = this.keys[key as K];
-                const ref = this.state.get(cacheKey);
+        const keys = Object.keys(next) as Array<keyof T>;
 
-                return ref && (
-                    next[key as K] ?? []
-                ).map(transform => 
-                    this.createTransformAsync({
-                        key: cacheKey,
-                        item: ref,
-                        next: transform
-                    })    
-                )
+        await Promise.all([
+            ...keys.map((key) => {
+
+                return (next[key] ?? []).map(transform => this.createTransformAsync({
+                    key,
+                    next: transform,
+                    prev: this.state[key]['value']
+                }))
+
             }).flat() as Array<Promise<void>>
         ])
 
@@ -217,23 +165,15 @@ class Store<T extends {
             ) => T[keyof T]['value']
         >
     }){
-        for (const cacheKey in this.keys){
-            const key = this.keys[cacheKey]
-            const item = this.state.get(key)
 
-            if (item){
-                const next = transforms.reduce((prev, transform) => transform(prev), item.value);
-                item.value = next
-                this.state.set(
-                    key,
-                    item
-                )
-
-                this.emitChange()
-                
-            }
-
-        }
+        const keys = Object.keys(this.state) as Array<keyof T>;
+        keys.map(key => {
+            transforms.map(transform => this.createTransform({
+                key,
+                next: transform,
+                prev: this.state[key]['value']
+            }))
+        })
 
         return this.getState()
     }
@@ -247,18 +187,15 @@ class Store<T extends {
             ) => Promise<T[keyof T]['value']>
         >
     }){
-        await Promise.all([
-            ...Object.keys(this.keys).map((key) => {
-                const cacheKey = this.keys[key as keyof T];
-                const ref = this.state.get(cacheKey);
+        const keys = Object.keys(this.state) as Array<keyof T>;
 
-                return ref && transforms.map(transform => 
-                    this.createTransformAsync({
-                        key: cacheKey,
-                        item: ref,
-                        next: transform
-                    })    
-                )
+        await Promise.all([
+            ...keys.map((key) => {
+                return transforms.map(transform => this.createTransformAsync({
+                    key,
+                    next: transform,
+                    prev: this.state[key]['value']
+                }))
             }).flat() as Array<Promise<void>>
         ])
 
@@ -266,105 +203,86 @@ class Store<T extends {
 
     }
 
-    private createTransform (
-        {
-            key,
-            item,
-            next
-        }: {
+    private createTransform<
+        K extends keyof T
+    >({
+        key,
+        next,
+        prev
+    }: Partial<{
+        key: K
+        next: (
+            prev: T[keyof T]['value']
+        ) => T[keyof T]['value']
+        prev: T[K]['value']
+    }>){
 
-
-            key: {
-                key: Extract<keyof T, string>
-            },
-            item: StoreItem<T, T[Extract<keyof T, string>]['value']>,
-            next: (
-                prev: T[keyof T]['value']
-            ) => T[keyof T]['value']
+        this.state  = {
+            ...this.state,
+            [key as K]: next ? next(prev) : prev
         }
-    ) {
-
-        item.value = next(item.value)
-        this.state.set(
-            key,
-            item
-        )
 
         this.emitChange()
     }
 
-    private async createTransformAsync(
-        {
-            key,
-            item,
-            next
-        }: {
+    private async createTransformAsync<
+        K extends keyof T
+    >({
+        key,
+        next,
+        prev
+    }: Partial<{
+        key: K
+        next: (
+            prev: T[keyof T]['value']
+        ) => T[keyof T]['value']
+        prev: T[K]['value']
+    }>){
 
-            key: {
-                key: Extract<keyof T, string>
-            },
-            item: StoreItem<T, T[Extract<keyof T, string>]['value']>,
-            next: (
-                prev: T[keyof T]['value']
-            ) => Promise<T[keyof T]['value']>
+        this.state  = {
+            ...this.state,
+            [key as K]: next ? await next(prev) : prev
         }
-    ){
-
-        item.value = await next(item.value)
-        this.state.set(
-            key,
-            item
-        )
 
         this.emitChange()
     }
 
-    private createMutation(
-        {
-            key,
-            item,
-            next
-        }: {
-
-            key: {
-                key: Extract<keyof T, string>
-            },
-            item: StoreItem<T, T[Extract<keyof T, string>]['value']>,
-            next: T[Extract<keyof T, string>]['value']
+    private createMutation<
+        K extends keyof T
+    >({
+        key,
+        next,
+        prev
+    }: Partial<{
+        key: K
+        next: T[K]['value'],
+        prev: T[K]['value']
+    }>){
+        
+        this.state  = {
+            ...this.state,
+            [key as K]: this.state[key as K].update(prev)(next)
         }
-    ){
-
-        item.value = item.update(item.value)(next)
-        this.state.set(
-            key,
-            item
-        )
-
-        console.log(item.value)
 
         this.emitChange()
     }
 
-    private async createMutationAsync(
-        {
-            key,
-            item,
-            next
-        }: {
+    private async createMutationAsync<
+        K extends keyof T
+    >({
+        key,
+        next,
+        prev
+    }: Partial<{
+        key: K
+        next: T[K]['value'],
+        prev: T[K]['value']
+    }>){
 
-            key: {
-                key: Extract<keyof T, string>
-            },
-            item: StoreItem<T, T[Extract<keyof T, string>]['value']>,
-            next: T[Extract<keyof T, string>]['value']
+        this.state  = {
+            ...this.state,
+            [key as K]: await this.state[key as K].update(prev)(next)
         }
-    ){
-
-        item.value = await item.update(item.value)(next)
-        this.state.set(
-            key,
-            item
-        )
 
         this.emitChange()
     }
@@ -377,19 +295,7 @@ class Store<T extends {
     }
 
     getState() {
-
-        const state: {
-            [Property in keyof T]: T[Extract<keyof T, string>]['value']
-        } = Object.assign({})
-
-        for (const cacheKey in this.keys){
-            const key = this.keys[cacheKey];
-            const ref = this.state.get(key);
-
-            state[cacheKey] = ref?.value
-        }
-
-        return state;
+        return this.state;
     }
 
     private emitChange() {
