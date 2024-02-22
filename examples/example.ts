@@ -1,30 +1,29 @@
 import { useStore, useSelector } from "../src/react"
 
 
-
 const store = useStore({
     boop: {
         value: [] as number[],
-        update: (prev: number[]) => (next: number[]) => prev.concat(next)
+        update: (prev: number[]) => async (next: number[]) => prev.concat(next)
     },
     beep: {
-        value: 1,
-        update: (prev: number) => (next: number) => prev + next
+        value: "Hello",
+        test: (prev: string) => (next: string) => prev + next
     }
 })
 
 
+
 const {
-    beep
+    beep,
+    boop
 } = useSelector(
     store,
-    (state, mutations) => ({
-        beep: {
-            value: state.beep,
-            update: mutations.beep
-        }
+    (store) => ({
+        boop: store.boop,
+        beep: store.beep
     })
 )
 
-
-beep.update({beep: 1})
+beep.test('Test')
+console.log(beep.value)
