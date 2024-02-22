@@ -3,7 +3,7 @@ import { Store } from './store';
 import { AsyncFunction, GeneratorFunction } from './async';
 import { MutationKey, StoreApi, StoreData, StoreMutation, StoreKey, StoreMutations, StoreValue } from './types';
 
-export const useStore = <T extends StoreApi<T>>(init: StoreApi<T>) => {
+const useStore = <T extends StoreApi<T>>(init: StoreApi<T>) => {
     const store = useRef(Store.init(init)).current;
 
     useSyncExternalStore(
@@ -14,7 +14,7 @@ export const useStore = <T extends StoreApi<T>>(init: StoreApi<T>) => {
     return store
 }
 
-export const useSelector = <
+const useSelector = <
     T extends StoreApi<T>
 >(
     store: Store<T>,
@@ -76,3 +76,32 @@ export const useSelector = <
     }, [state])
 }
 
+
+const createImpl = <T extends StoreApi<T>>(init :T) => {
+
+
+    const useCreatedStore = (
+        selector: (
+            state:  {
+                [Key in keyof T]: T[Key]
+            }
+        ) => {
+            [Key in StoreKey<T>]: T[Key]
+        }
+    ) => {
+
+        const store = useStore(init);
+
+        return  useSelector(
+            store,
+            selector
+        )
+
+    } 
+
+    return useCreatedStore
+
+}
+
+
+export const create = <T extends StoreApi<T>>(init: T) => createImpl(init)

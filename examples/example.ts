@@ -1,7 +1,7 @@
-import { useStore, useSelector } from "../src/react"
+import { create } from "../src/react"
 
 
-const store = useStore({
+const useMyCustomStore = create({
     boop: {
         value: [] as number[],
         update: (prev: number[]) => async (next: number[]) => prev.concat(next)
@@ -17,8 +17,7 @@ const store = useStore({
 const {
     beep,
     boop
-} = useSelector(
-    store,
+} = useMyCustomStore(
     (store) => ({
         boop: store.boop,
         beep: store.beep

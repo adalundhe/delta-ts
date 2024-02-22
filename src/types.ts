@@ -62,8 +62,4 @@ export type MutationKey<T extends StoreApi<T>> = Exclude< keyof StoreApi<T>[keyo
 
 export type StoreMutations<T extends StoreApi<T>> = Record<MutationKey<T>, StoreMutation<T, StoreApi<T>[keyof StoreApi<T>][MutationKey<T>]>>
 
-// export type DefaultMutations<T extends StoreApi<T>> = Record<StoreKey<T>, Record<
-//     MutationKey<T>,   
-//     StoreMutation<T, StoreApi<T>[keyof StoreApi<T>][MutationKey<T>]>
-// >>
 
