@@ -55,7 +55,7 @@ export const useSelector = <T extends {
 
         return mutationSet
 
-    }, [state])
+    }, [])
 
     return useMemo(() => selector(state, mutators), [mutators])
 }
