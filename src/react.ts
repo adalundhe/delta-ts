@@ -1,6 +1,6 @@
-import { Key, useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useMemo, useRef, useSyncExternalStore } from 'react';
 import { Store } from './store';
-import { StoreApi, StoreData, StoreKey, StoreItem, StoreValue, StoreMutations } from './types';
+import { StoreApi, StoreData, StoreItem } from './types';
 
 export const useStore = <T extends {
     [Property in keyof T]: StoreItem<T[Property]['value']>
@@ -15,25 +15,6 @@ export const useStore = <T extends {
     return store
 }
 
-
-const useStoreSelection = <T extends {
-    [Property in keyof T]: StoreItem<T[Property]['value']>
-}>(
-    store: Store<T>,
-    key: keyof T
-) => {
-
-    const storeState = store.getState();
-    const storeMutators = store.getMutators();
-
-    const state = useMemo(() => storeState[key], [storeState]);
-    const mutator = useMemo(() => storeMutators[key], [storeMutators]);
-
-    return {
-        key: state,
-        update: mutator
-    }
-}
 
 export const useSelector = <T extends {
     [Property in keyof T]: StoreItem<T[Property]['value']>
@@ -79,29 +60,3 @@ export const useSelector = <T extends {
     return useMemo(() => selector(state, mutators), [mutators])
 }
 
-
-const store = useStore({
-    boop: {
-        value: [] as number[],
-        update: (prev: number[]) => (next: number[]) => prev.concat(next)
-    },
-    beep: {
-        value: 1,
-        update: (prev: number) => (next: number) => prev + next
-    }
-})
-
-
-const {
-    beep
-} = useSelector(
-    store,
-    (state, mutations) => ({
-        beep: {
-            value: state.beep,
-            update: mutations.beep
-        }
-    })
-)
-
-beep.update({beep: 1})
