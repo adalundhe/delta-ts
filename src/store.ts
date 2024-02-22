@@ -1,4 +1,3 @@
-import {StoreItem} from './store_item'
 import  { 
     StoreApi, 
     StoreData, 
@@ -7,7 +6,8 @@ import  {
     StoreValue,
     StoreTransform,
     StoreTransformSet,
-    StoreTransformSeries
+    StoreTransformSeries,
+    StoreItem
 } from './types'
 
 let listeners: Array<
@@ -15,7 +15,9 @@ let listeners: Array<
 > = []
 
 
-class Store<T>{
+class Store<T extends {
+    [Property in keyof T]: StoreItem<T[Property]['value']>
+}>{
 
     private state: StoreData<T>;
     private mutators: StoreMutations<T>
@@ -37,7 +39,9 @@ class Store<T>{
 
     }
     
-    static init<T>(
+    static init<T extends {
+        [Property in keyof T]: StoreItem<T[Property]['value']>
+    }>(
         state: T
     ) {
         return new Store<
@@ -65,8 +69,7 @@ class Store<T>{
             }
             
         }
-
-        return this.getState()
+        
     }
 
     async mutateAsync(next: Partial<StoreData<T>>){
@@ -80,9 +83,8 @@ class Store<T>{
                     next: next[key] as StoreValue<T>
                 })
             })
-        ])
+        ])   
         
-        return this.getState()
     }
 
     transform(next: StoreTransformSet<T>){
@@ -93,8 +95,7 @@ class Store<T>{
                 next: next[key] as StoreTransform<T>
             })
         }
-
-        return this.getState()
+        
     }
 
     async transformAsync(next: Partial<{
@@ -112,9 +113,7 @@ class Store<T>{
                     next: next[key]
                 })
             })
-        ])
-
-        return this.getState()
+        ])   
         
     }
 
@@ -127,8 +126,7 @@ class Store<T>{
             }))
 
         }
-
-        return this.getState()
+        
     }
 
     async seriesAsync(next: Partial<{
@@ -151,8 +149,6 @@ class Store<T>{
 
             }).flat() as Array<Promise<void>>
         ])
-
-        return this.getState()
         
     }
 
@@ -169,8 +165,7 @@ class Store<T>{
                 next: transform
             }))
         })
-
-        return this.getState()
+        
     }
 
     async normAsync({
@@ -192,8 +187,6 @@ class Store<T>{
                 }))
             }).flat() as Array<Promise<void>>
         ])
-
-        return this.getState()
 
     }
 

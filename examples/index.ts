@@ -40,9 +40,7 @@ store.norm({
     ]
 })
 
-const {
-    boop
-} = store.series({
+store.series({
     boop: [
         (prev: number[]) => [
             4,
@@ -55,4 +53,4 @@ const {
     ]
 })
 
-console.log(boop)
+console.log(store.get('boop'))
