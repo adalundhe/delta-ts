@@ -111,11 +111,37 @@ const createImpl = <T extends StoreApi<T>>(init :T) => {
 
 }
 
-export const useAtom = <T extends Atom<T>, K>(
+
+export const useAtom = <
+    T extends Atom<T>,
+    K extends T['value']
+>(
     atom: T,
-    select?: (state: T) => Partial<Atom<T>>
+    select?: ({
+        value
+    }: {
+        value: K
+    }) => {
+        value: K
+    }
 ) => {
-    return useMemo(() => select ? select(atom) : atom, [atom.value])
+
+    const { value } = useMemo(() => select ? {
+        ...select({
+            value: atom.value
+        } as {
+            value: K
+        })
+    } : {
+        value: atom.value
+    }, [atom])
+
+    const [atomValue, updateAtom] = useState<K>(value as K)
+
+    return {
+        value: atomValue as K,
+        update: (value: K) => updateAtom(value)
+    }
 }
 
 

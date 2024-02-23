@@ -14,7 +14,6 @@ const useMyCustomStore = create({
 })
 
 
-
 const {
     beep,
     boop
@@ -25,12 +24,15 @@ const {
     })
 )
 
+
 const {
-    value
+    value,
+    update
 } = useAtom({...boop}, ({
     value
 }) => ({
-    value: value.length > 0 ? value : value
+    value: value.length > 0 ? value : [0, 1, 2, 3]
 }))
 
+update(value)
 console.log(beep.concat('test'))
