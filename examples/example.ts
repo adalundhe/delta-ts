@@ -15,7 +15,6 @@ const useMyCustomStore = create({
 
 
 const {
-    beep,
     boop
 } = useMyCustomStore(
     (store) => ({
@@ -35,4 +34,3 @@ const {
 }))
 
 update(value)
-console.log(beep.concat('test'))
