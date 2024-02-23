@@ -1,14 +1,16 @@
-import { create } from "../src/react"
+import { create, useAtom } from "../src/react"
+import { Store } from "../src/store"
 
 
 const useMyCustomStore = create({
     boop: {
         value: [] as number[],
-        update: (prev: number[]) => async (next: number[]) => prev.concat(next)
+        concat: (next: number[]) => async (prev: number[]) => prev.concat(next)
     },
     beep: {
-        value: "Hello",
-        test: (prev: string) => (next: string) => prev + next
+        value: "",
+        concat: (next: string) => (prev: string) => prev + next,
+
     }
 })
 
@@ -24,5 +26,12 @@ const {
     })
 )
 
-beep.test('Test')
-console.log(beep.value)
+const {
+    value
+} = useAtom({...boop}, ({
+    value
+}) => ({
+    value: value.length > 0 ? value : value
+}))
+
+console.log(beep.concat('test'))

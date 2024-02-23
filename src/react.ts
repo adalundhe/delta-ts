@@ -1,7 +1,7 @@
-import { Key, useMemo, useRef, useSyncExternalStore } from 'react';
+import { Key, RefAttributes, useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Store } from './store';
 import { AsyncFunction, GeneratorFunction } from './async';
-import { MutationKey, StoreApi, StoreData, StoreMutation, StoreKey, StoreMutations, StoreValue } from './types';
+import { MutationKey, StoreApi, StoreData, StoreMutation, StoreKey, StoreMutations, StoreValue, Atom } from './types';
 
 const useStore = <T extends StoreApi<T>>(init: StoreApi<T>) => {
     const store = useRef(Store.init(init)).current;
@@ -14,6 +14,7 @@ const useStore = <T extends StoreApi<T>>(init: StoreApi<T>) => {
     return store
 }
 
+
 const useSelector = <
     T extends StoreApi<T>
 >(
@@ -23,51 +24,58 @@ const useSelector = <
             [Key in keyof T]: T[Key]
         }
     ) => {
-        [Key in StoreKey<T>]: T[Key]
+        [Key in StoreKey<T>]: Partial<T[Key]>
     }
 ) => {
 
     const state = useMemo(() => store.getState(), [])
     return useMemo(() => {
 
-        const slice = selector(state as StoreApi<T>);
+        const slice = selector(state as StoreApi<T>) as {
+            [Key in keyof T]: T[Key]
+        };
         const wrappedState: {
             [Key in StoreKey<T>]: T[Key]
         } = Object.create({})
 
-        const nonValueKeys = Object.keys(slice).filter(key => key !== 'value')
+        for (const key in slice){
 
-        for (const key of nonValueKeys){
+            const subsetSlice = slice[key as keyof T] as T[keyof T];
+            const nonValueKeys = Object.keys(subsetSlice as {}).filter(key => key !== 'value')
 
-            const mutation = slice[key as keyof T] as StoreMutation<T, typeof slice[keyof T]>;
-            const storeKey = store.getMutationKey(key as MutationKey<T>);
+            for (const mutationKey of nonValueKeys){
 
-            if ((mutation instanceof AsyncFunction && AsyncFunction !== Function && AsyncFunction !== GeneratorFunction) === true){
-                const mutator = async (next: Parameters<typeof mutation>) => {
-                    await store.mutateAsync({
-                        [storeKey]: next
-                    } as Partial<StoreData<T>>)
-
-                    return store.get(storeKey)
-                }
-
-                wrappedState[key as keyof T] = mutator as T[keyof T]
-            } else {
-                
-                const mutator = (next: Parameters<typeof mutation>) => {
-                    store.mutateAsync({
-                        [storeKey]: next
-                    } as Partial<StoreData<T>>)
-
-                    return store.get(storeKey)
-                }
-
-                wrappedState[key as keyof T] = mutator as T[keyof T]
-
-            }
+                const mutation = subsetSlice[mutationKey as keyof T[keyof T]] as any;
         
+                if ((mutation instanceof AsyncFunction && AsyncFunction !== Function && AsyncFunction !== GeneratorFunction) === true){
+                    const mutator = async (next: Parameters<typeof mutation>) => {
+                        await store.createMutationAsync({
+                            key: key as StoreKey<T>,
+                            next: next as StoreValue<T>
+                        })
+    
+                        return store.get(key)
+                    }
+    
+                    wrappedState[mutationKey as keyof T] = mutator as T[keyof T]
+                } else {
+                    
+                    const mutator = (next: Parameters<typeof mutation>) => {
+                        store.createMutation({
+                            key: key as StoreKey<T>,
+                            next: next as StoreValue<T>
+                        })
+    
+                        return store.get(key)
+                    }
+    
+                    wrappedState[mutationKey as keyof T] = mutator as T[keyof T]
+    
+                }
+            
+            }
         }
-
+        
         return {
             ...slice,
             ...wrappedState
@@ -79,15 +87,15 @@ const useSelector = <
 
 const createImpl = <T extends StoreApi<T>>(init :T) => {
 
-
     const useCreatedStore = (
         selector: (
             state:  {
                 [Key in keyof T]: T[Key]
             }
         ) => {
-            [Key in StoreKey<T>]: T[Key]
+            [Key in StoreKey<T>]: Partial<T[Key]>
         }
+
     ) => {
 
         const store = useStore(init);
@@ -101,6 +109,13 @@ const createImpl = <T extends StoreApi<T>>(init :T) => {
 
     return useCreatedStore
 
+}
+
+export const useAtom = <T extends Atom<T>, K>(
+    atom: T,
+    select?: (state: T) => Partial<Atom<T>>
+) => {
+    return useMemo(() => select ? select(atom) : atom, [atom.value])
 }
 
 

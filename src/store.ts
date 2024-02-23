@@ -237,7 +237,7 @@ class Store<T extends StoreApi<T>>{
         this.emitChange()
     }
 
-    private createMutation({
+    createMutation({
         key,
         next
     }: {
@@ -259,7 +259,7 @@ class Store<T extends StoreApi<T>>{
         this.emitChange()
     }
 
-    private async createMutationAsync({
+    async createMutationAsync({
         key,
         next
     }: {
