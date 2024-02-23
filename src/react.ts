@@ -144,5 +144,29 @@ export const useAtom = <
     }
 }
 
+const createAtomImpl = <
+    T extends Atom<T>,
+    K extends T['value']
+>(atom: T) => {
 
+    const useCreatedAtom = (
+        select?: ({
+            value
+        }: {
+            value: K
+        }) => {
+            value: K
+        }
+    ) => {
+        return useAtom(
+            {...atom},
+            select
+        )
+    }
+
+    return useCreatedAtom
+
+}
+
+export const atom = <T extends Atom<T>>(atom: T) => createAtomImpl(atom)
 export const create = <T extends StoreApi<T>>(init: T) => createImpl(init)

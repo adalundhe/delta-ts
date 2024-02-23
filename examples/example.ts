@@ -1,4 +1,4 @@
-import { create, useAtom } from "../src/react"
+import { create, atom } from "../src/react"
 
 
 const useMyCustomStore = create({
@@ -24,10 +24,13 @@ const {
 )
 
 
+const useMyCustomAtom = atom(boop)
+
+
 const {
     value,
     update
-} = useAtom({...boop}, ({
+} = useMyCustomAtom(({
     value
 }) => ({
     value: value.length > 0 ? value : [0, 1, 2, 3]
