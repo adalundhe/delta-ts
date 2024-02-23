@@ -1,5 +1,4 @@
 import { create, useAtom } from "../src/react"
-import { Store } from "../src/store"
 
 
 const useMyCustomStore = create({
