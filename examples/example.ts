@@ -24,16 +24,14 @@ const {
 )
 
 
-const useMyCustomAtom = atom(boop)
-
-
 const {
     value,
     update
-} = useMyCustomAtom(({
+} = atom(boop)(({
     value
 }) => ({
     value: value.length > 0 ? value : [0, 1, 2, 3]
 }))
+
 
 update(value)
