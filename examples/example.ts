@@ -30,7 +30,8 @@ const {
 } = atom(boop)(({
     value
 }) => ({
-    value: value.length > 0 ? value : [0, 1, 2, 3]
+    value: value.length > 0 ? value : [0, 1, 2, 3],
+    update: (next: number[]) => value.concat(next)
 }))
 
 

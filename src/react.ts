@@ -14,37 +14,23 @@ const useStore = <T extends StoreApi<T>>(init: StoreApi<T>) => {
     return store
 }
 
-
-const useSelector = <
-    T extends StoreApi<T>
->(
-    store: Store<T>,
-    selector: (
-        state:  {
-            [Key in keyof T]: T[Key]
-        }
-    ) => {
-        [Key in StoreKey<T>]: Partial<T[Key]>
-    }
+const useWrappedState = <T extends StoreApi<T>>(
+    store: Store<T>
 ) => {
-
-    const state = useMemo(() => store.getState(), [])
     return useMemo(() => {
-
-        const slice = selector(state as StoreApi<T>) as {
-            [Key in keyof T]: T[Key]
-        };
         const wrappedState: {
             [Key in StoreKey<T>]: T[Key]
         } = Object.create({})
 
-        for (const key in slice){
-
-            const subsetSlice = slice[key as keyof T] as T[keyof T];
+        const state = store.getState()
+    
+        for (const key in state){
+    
+            const subsetSlice = state[key as keyof T] as T[keyof T];
             const nonValueKeys = Object.keys(subsetSlice as {}).filter(key => key !== 'value')
-
+    
             for (const mutationKey of nonValueKeys){
-
+    
                 const mutation = subsetSlice[mutationKey as keyof T[keyof T]] as any;
         
                 if ((mutation instanceof AsyncFunction && AsyncFunction !== Function && AsyncFunction !== GeneratorFunction) === true){
@@ -75,12 +61,27 @@ const useSelector = <
             
             }
         }
-        
-        return {
-            ...slice,
-            ...wrappedState
-        }
+        return wrappedState
+    }, [])
+}
 
+
+const useSelector = <
+    T extends StoreApi<T>
+>(
+    store: Store<T>,
+    selector: (
+        state:  {
+            [Key in keyof T]: T[Key]
+        }
+    ) => {
+        [Key in StoreKey<T>]: Partial<T[Key]>
+    }
+) => {
+
+    const state = useWrappedState(store);
+    return  useMemo(() => selector(state)  as {
+        [Key in keyof T]: T[Key]
     }, [state])
 }
 
@@ -95,20 +96,15 @@ const createImpl = <T extends StoreApi<T>>(init :T) => {
         ) => {
             [Key in StoreKey<T>]: Partial<T[Key]>
         }
-
     ) => {
-
         const store = useStore(init);
-
         return  useSelector(
             store,
             selector
         )
-
     } 
 
     return useCreatedStore
-
 }
 
 
@@ -122,27 +118,38 @@ export const useAtom = <
     }: {
         value: K
     }) => {
-        value: K
+        value: K,
+        update?: (next: K) => K
     }
 ) => {
 
-    const { value } = useMemo(() => select ? {
+    const { 
+        value,
+        update
+     } = useMemo(() => select ? {
         ...select({
             value: atom.value
         } as {
-            value: K
+            value: K,
+            update?: (value: K) => K
         })
     } : {
         value: atom.value
+    } as {
+        value: K,
+        update?: (value: K) => K
     }, [atom])
 
     const [atomValue, updateAtom] = useState<K>(value as K)
 
     return {
         value: atomValue as K,
-        update: (value: K) => updateAtom(value)
+        update: (value: K) => updateAtom(
+            update ? update(value): value
+        )
     }
 }
+
 
 const createAtomImpl = <
     T extends Atom<T>,
