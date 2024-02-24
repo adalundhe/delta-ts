@@ -1,47 +1,33 @@
 import { AtomStore } from "./types";
 
+class Atom<T extends AtomStore<T>, K extends T["value"]> {
+  private value;
+  private updateFn?: (value: K) => K;
+  private subscribers: Set<() => void>;
 
-class Atom<T extends AtomStore<T>, K extends T['value']>{
-    private value;
-    private updateFn?: (value: K) => K;
-    private subscribers: Set<() => void>;
+  constructor({ value, update }: { value: K; update?: (value: K) => K }) {
+    this.value = value;
+    this.updateFn = update;
+    this.subscribers = new Set();
+  }
+  subscribe(callback: () => void) {
+    this.subscribers.add(callback);
+    return () => this.subscribers.delete(callback);
+  }
 
-    constructor({
-        value,
-        update
-    }: {
-        value: K,
-        update?: (value: K) => K
-    }){
-        this.value = value
-        this.updateFn = update; 
-        this.subscribers = new Set()
+  update(value: K) {
+    this.value = this.updateFn ? this.updateFn(value) : value;
+    this.subscribers.forEach((callback) => callback());
+    return this.value;
+  }
 
-    }
-    subscribe(callback: () => void) {
-        this.subscribers.add(callback);
-        return () => this.subscribers.delete(callback);
-    }
+  getValue() {
+    return this.value;
+  }
 
-    update(value: K){
-        this.value = this.updateFn ? this.updateFn(value) : value;
-        this.subscribers.forEach((callback) => callback());
-        return this.value
-    }
-
-    getValue() {
-        return this.value;
-    }
-
-    setUpdateFn(
-        update: (value: K) => K
-    ) {
-         this.updateFn = update
-    }
-
+  setUpdateFn(update: (value: K) => K) {
+    this.updateFn = update;
+  }
 }
 
-
-export {
-    Atom
-}
+export { Atom };

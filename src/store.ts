@@ -8,7 +8,6 @@ import {
   StoreValue,
 } from "./types";
 
-
 class Store<T extends StoreApi<T>> {
   private state: StoreData<T>;
   private mutators: StoreMutations<T>;
@@ -23,9 +22,9 @@ class Store<T extends StoreApi<T>> {
     this.state = Object.create({});
     this.mutators = Object.create({});
     this.store = state;
-    this.assembled = Object.create({})
+    this.assembled = Object.create({});
     this.mutationKeyMap = Object.create({});
-    this.subscribers = new Set()
+    this.subscribers = new Set();
 
     for (const key in state) {
       const subStore = state[key];
@@ -33,79 +32,82 @@ class Store<T extends StoreApi<T>> {
         (key) => key !== "value",
       ) as Array<MutationKey<T>>;
 
-      this.assembled[key] = Object.create({...subStore})
+      this.assembled[key] = Object.create({ ...subStore });
 
       for (const mutationKey of nonValueKeys) {
-        const mutator = state[key][mutationKey] as StoreMutations<T>[typeof mutationKey]
-        this.mutators[mutationKey] = mutator
+        const mutator = state[key][
+          mutationKey
+        ] as StoreMutations<T>[typeof mutationKey];
+        this.mutators[mutationKey] = mutator;
 
         if (
           (mutator instanceof AsyncFunction &&
             AsyncFunction !== Function &&
             AsyncFunction !== GeneratorFunction) === true
-        ){
-
-          const assembledMutation = async (next: StoreValue<T, keyof T>) => { 
-            
+        ) {
+          const assembledMutation = async (next: StoreValue<T, keyof T>) => {
             const { value } = this.assembled[key];
-            const mutation = this.mutators[mutationKey as unknown as MutationKey<T>];
+            const mutation =
+              this.mutators[mutationKey as unknown as MutationKey<T>];
 
-            const nextVal = await mutation(next)(value as StoreValue<T, keyof T>) as typeof value
-            
-            this.assembled[key] = Object.assign(
-              this.assembled[key],
-              {
-                value: nextVal
-              }
-            )
-            this.assembled = Object.assign({}, this.assembled)
+            const nextVal = (await mutation(next)(
+              value as StoreValue<T, keyof T>,
+            )) as typeof value;
+
+            this.assembled[key] = Object.assign(this.assembled[key], {
+              value: nextVal,
+            });
+            this.assembled = Object.assign({}, this.assembled);
 
             this.subscribers.forEach((callback) => callback());
 
-            return nextVal
+            return nextVal;
           };
 
-          this.assembled[key][mutationKey] = assembledMutation as StoreApi<T>[Extract<keyof T, string>][MutationKey<T>]
-
+          this.assembled[key][mutationKey] =
+            assembledMutation as StoreApi<T>[Extract<
+              keyof T,
+              string
+            >][MutationKey<T>];
         } else {
-          const assembledMutation = (next: StoreValue<T, keyof T>) => { 
-            
+          const assembledMutation = (next: StoreValue<T, keyof T>) => {
             const { value } = this.assembled[key];
-            const mutation = this.mutators[mutationKey as unknown as MutationKey<T>];
+            const mutation =
+              this.mutators[mutationKey as unknown as MutationKey<T>];
 
-            const nextVal = mutation(next)(value as StoreValue<T, keyof T>) as typeof value
-            
-            this.assembled[key] = Object.assign(
-              this.assembled[key],
-              {
-                value: nextVal
-              }
-            )
-            this.assembled = Object.assign({}, this.assembled)
+            const nextVal = mutation(next)(
+              value as StoreValue<T, keyof T>,
+            ) as typeof value;
+
+            this.assembled[key] = Object.assign(this.assembled[key], {
+              value: nextVal,
+            });
+            this.assembled = Object.assign({}, this.assembled);
 
             this.subscribers.forEach((callback) => callback());
 
-            return nextVal
+            return nextVal;
           };
-          
-          this.assembled[key][mutationKey] = assembledMutation as StoreApi<T>[Extract<keyof T, string>][MutationKey<T>]
+
+          this.assembled[key][mutationKey] =
+            assembledMutation as StoreApi<T>[Extract<
+              keyof T,
+              string
+            >][MutationKey<T>];
         }
 
-          this.mutationKeyMap[mutationKey] = key;
-        }
-        
-      
-        this.state = Object.assign({}, this.state, {
-          [key]: subStore.value,
-        });
-
+        this.mutationKeyMap[mutationKey] = key;
       }
 
-      this.store = {
-        ...this.store,
-        ...this.assembled
-      }
+      this.state = Object.assign({}, this.state, {
+        [key]: subStore.value,
+      });
+    }
 
+    this.store = {
+      ...this.store,
+      ...this.assembled,
+    };
   }
 
   static init<T extends StoreApi<T>>(state: T) {
@@ -120,7 +122,6 @@ class Store<T extends StoreApi<T>> {
   getStore() {
     return this.assembled;
   }
-
 }
 
 export { Store };

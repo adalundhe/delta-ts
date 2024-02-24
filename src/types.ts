@@ -24,8 +24,10 @@ export type StoreApi<
 };
 
 export type StoreKey<T extends StoreApi<T>> = keyof StoreApi<T>;
-export type StoreValue<T extends StoreApi<T>, K extends keyof T> =
-  StoreApi<T>[K]["value"];
+export type StoreValue<
+  T extends StoreApi<T>,
+  K extends keyof T,
+> = StoreApi<T>[K]["value"];
 
 export type StoreData<T extends StoreApi<T>> = Record<
   StoreKey<T>,
@@ -35,12 +37,16 @@ export type StoreData<T extends StoreApi<T>> = Record<
 export type StoreMutation<
   T extends StoreApi<T>,
   K extends keyof T,
-  M extends Exclude<keyof StoreApi<T>[K], 'value'>,
+  M extends Exclude<keyof StoreApi<T>[K], "value">,
   P,
 > = StoreApi<T>[K][M] &
-  (P extends (next: StoreValue<T, K>) => (prev: StoreValue<T, K>) => StoreValue<T, K>
+  (P extends (
+    next: StoreValue<T, K>,
+  ) => (prev: StoreValue<T, K>) => StoreValue<T, K>
     ? (next: StoreValue<T, K>) => (prev: StoreValue<T, K>) => StoreValue<T, K>
-    : (next: StoreValue<T, K>) => (prev: StoreValue<T, K>) => Promise<StoreValue<T, K>>);
+    : (
+        next: StoreValue<T, K>,
+      ) => (prev: StoreValue<T, K>) => Promise<StoreValue<T, K>>);
 
 export type StoreTransformSet<T extends StoreApi<T>> = Partial<
   Record<StoreKey<T>, StoreTransform<T, keyof T>>
@@ -50,10 +56,7 @@ export type StoreTransformSeries<T extends StoreApi<T>> = Partial<
   Record<StoreKey<T>, Array<StoreTransform<T, keyof T>>>
 >;
 
-export type StoreTransform<
-  T extends StoreApi<T>,
-  K extends keyof T
-> = (
+export type StoreTransform<T extends StoreApi<T>, K extends keyof T> = (
   prev: StoreValue<T, K>,
 ) => StoreValue<T, K> | Promise<StoreValue<T, K>>;
 
@@ -65,10 +68,10 @@ export type MutationKey<T extends StoreApi<T>> = Exclude<
 export type StoreMutations<T extends StoreApi<T>> = Record<
   MutationKey<T>,
   StoreMutation<
-    T, 
+    T,
     keyof T,
-    Exclude<keyof T[keyof T], 'value'>,
-    StoreApi<T>[keyof T][Exclude<keyof T[keyof T], 'value'>]
+    Exclude<keyof T[keyof T], "value">,
+    StoreApi<T>[keyof T][Exclude<keyof T[keyof T], "value">]
   >
 >;
 
@@ -76,12 +79,11 @@ export type AtomStore<T> = {
   value: T[keyof T];
 };
 
-
 export type MutationRequest<
   T extends StoreApi<T>,
-  K extends keyof T
+  K extends keyof T,
 > = Partial<{
   [Key in StoreKey<T>]: Partial<{
-    [Mutation in MutationKey<T>]: StoreValue<T, K>
-  }>
-}>
+    [Mutation in MutationKey<T>]: StoreValue<T, K>;
+  }>;
+}>;

@@ -18,7 +18,7 @@
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "bundler",
     "noUncheckedIndexedAccess": true,
-    "baseUrl": ".",
+    "baseUrl": "."
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
