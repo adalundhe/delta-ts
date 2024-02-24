@@ -1,54 +1,38 @@
 import { useMemo, useSyncExternalStore } from "react";
+import useSyncExports from "use-sync-external-store/shim/with-selector";
 import { Atom } from "./atom";
 import { Store } from "./store";
 import { AtomStore, StoreApi } from "./types";
-import useSyncExports from 'use-sync-external-store/shim/with-selector';
 
-const { useSyncExternalStoreWithSelector } = useSyncExports
+const { useSyncExternalStoreWithSelector } = useSyncExports;
 
-export const compare = <V>({ 
-  prev, 
+export const compare = <V>({
+  prev,
   next,
-  is = ({
-    prev,
-    next
-  }: {
-    prev: V, 
-    next: V
-  }) => prev === next
+  is = ({ prev, next }: { prev: V; next: V }) => prev === next,
 }: {
-  prev: V,
-  next:  V,
-  is?: ({
-    prev,
-    next
-  }: {
-    prev: V, 
-    next: V
-  }) => boolean
-}) => is({prev, next})
+  prev: V;
+  next: V;
+  is?: ({ prev, next }: { prev: V; next: V }) => boolean;
+}) => is({ prev, next });
 
-
-const createImpl = <T extends StoreApi<T>, P>(store: Store<T>, init: T) => {
+const createImpl = <T extends StoreApi<T>>(store: Store<T>, init: T) => {
   const useCreatedStore = (
     selector: (state: T) => any,
-    comparator?: ({
-      next,
-      prev
-    }: {
-      next: T,
-      prev: T
-    }) => boolean,
+    comparator?: ({ next, prev }: { next: T; prev: T }) => boolean,
   ) => {
     return useSyncExternalStoreWithSelector(
       (callback) => store.subscribe(callback),
       () => store.getStore(),
       () => init,
       (state: T) => selector(state) as T,
-      comparator ? (a: T, b: T) => comparator({
-        next: a,
-        prev: b
-      }) : undefined
+      comparator
+        ? (a: T, b: T) =>
+            comparator({
+              next: a,
+              prev: b,
+            })
+        : undefined,
     );
   };
 
@@ -93,7 +77,7 @@ const createAtomImpl = <T extends AtomStore<T>, K extends T["value"]>(
 };
 
 export const atom = <T extends AtomStore<T>>(
-  atom: T & { update: (value: T['value']) => T['value'] },
+  atom: T & { update: (value: T["value"]) => T["value"] },
 ) => {
   const atomStore = new Atom<T, typeof atom.value>({
     value: atom.value as T["value"],

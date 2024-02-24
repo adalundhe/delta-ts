@@ -7,7 +7,7 @@ export type StoreItemWithMutators<I, K extends keyof I, V extends I[K]> = {
 };
 
 export type StoreItem<I, K extends keyof I, V extends I[K]> =
-  StoreItemWithValue<I, K, V>
+  | StoreItemWithValue<I, K, V>
   | (StoreItemWithValue<I, K, V> & StoreItemWithMutators<I, K, V>);
 
 export type StoreApi<
