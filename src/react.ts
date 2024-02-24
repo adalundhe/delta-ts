@@ -3,6 +3,8 @@ import { Atom } from "./atom";
 import { Store } from "./store";
 import { AtomStore, StoreApi, StoreKey } from "./types";
 
+type callback = () => void;
+
 const useSelector = <T extends StoreApi<T>>(
   store: Store<T>,
   selector: (state: {
@@ -30,7 +32,7 @@ const createImpl = <T extends StoreApi<T>>(store: Store<T>, init: T) => {
     },
   ) => {
     useSyncExternalStore(
-      (callback) => store.subscribe(callback),
+      (callback: callback) => store.subscribe(callback),
       () => store.getStore(),
       () => init,
     );
@@ -55,7 +57,7 @@ export const useAtom = <T extends AtomStore<T>, K extends T["value"]>(
 
   return {
     value: useSyncExternalStore(
-      (callback) => atomStore.subscribe(callback),
+      (callback: callback) => atomStore.subscribe(callback),
       () => atomStore.getValue(),
       () => atom.value,
     ) as K,
@@ -69,7 +71,7 @@ const createAtomImpl = <T extends AtomStore<T>, K extends T["value"]>(
 ) => {
   return () => ({
     value: useSyncExternalStore(
-      (callback) => atom.subscribe(callback),
+      (callback: callback) => atom.subscribe(callback),
       () => atom.getValue(),
       () => init,
     ) as K,
