@@ -1,40 +1,55 @@
 import { useMemo, useSyncExternalStore } from "react";
 import { Atom } from "./atom";
 import { Store } from "./store";
-import { AtomStore, StoreApi, StoreKey } from "./types";
+import { AtomStore, StoreApi } from "./types";
+import useSyncExports from 'use-sync-external-store/shim/with-selector';
 
-const useSelector = <T extends StoreApi<T>>(
-  store: Store<T>,
-  selector: (state: {
-    [Key in keyof T]: T[Key];
-  }) => {
-    [Key in StoreKey<T>]: Partial<T[Key]>;
-  },
-) => {
-  const state = store.getStore();
-  return useMemo(
-    () =>
-      selector(state) as {
-        [Key in keyof T]: T[Key];
-      },
-    [state, selector],
-  );
-};
+const { useSyncExternalStoreWithSelector } = useSyncExports
 
-const createImpl = <T extends StoreApi<T>>(store: Store<T>, init: T) => {
+export const compare = <V>({ 
+  prev, 
+  next,
+  is = ({
+    prev,
+    next
+  }: {
+    prev: V, 
+    next: V
+  }) => prev === next
+}: {
+  prev: V,
+  next:  V,
+  is?: ({
+    prev,
+    next
+  }: {
+    prev: V, 
+    next: V
+  }) => boolean
+}) => is({prev, next})
+
+
+const createImpl = <T extends StoreApi<T>, P>(store: Store<T>, init: T) => {
   const useCreatedStore = (
-    selector: (state: {
-      [Key in keyof T]: T[Key];
-    }) => {
-      [Key in StoreKey<T>]: Partial<T[Key]>;
-    },
+    selector: (state: T) => any,
+    comparator?: ({
+      next,
+      prev
+    }: {
+      next: T,
+      prev: T
+    }) => boolean,
   ) => {
-    useSyncExternalStore(
+    return useSyncExternalStoreWithSelector(
       (callback) => store.subscribe(callback),
       () => store.getStore(),
       () => init,
+      (state: T) => selector(state) as T,
+      comparator ? (a: T, b: T) => comparator({
+        next: a,
+        prev: b
+      }) : undefined
     );
-    return useSelector(store, selector);
   };
 
   return useCreatedStore;
@@ -78,7 +93,7 @@ const createAtomImpl = <T extends AtomStore<T>, K extends T["value"]>(
 };
 
 export const atom = <T extends AtomStore<T>>(
-  atom: AtomStore<T> & { update: (value: T[keyof T]) => T[keyof T] },
+  atom: T & { update: (value: T['value']) => T['value'] },
 ) => {
   const atomStore = new Atom<T, typeof atom.value>({
     value: atom.value as T["value"],

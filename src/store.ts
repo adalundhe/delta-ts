@@ -96,7 +96,7 @@ class Store<T extends StoreApi<T>> {
             >][MutationKey<T>];
         }
 
-        this.mutationKeyMap[mutationKey] = key;
+        this.mutationKeyMap[mutationKey] = key as StoreKey<T>;
       }
 
       this.state = Object.assign({}, this.state, {

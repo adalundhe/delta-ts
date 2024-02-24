@@ -7,25 +7,3 @@ const store = Store.init({
   },
 });
 
-// const {
-//     boop
-// } = useStore(store)
-
-store.mutate({
-  boop: [0],
-});
-
-store.transform({
-  boop: (prev: number[]) => [1, ...prev],
-});
-
-store.norm({
-  transforms: [
-    (prev: number[]) => [2, ...prev],
-    (prev: number[]) => [3, ...prev],
-  ],
-});
-
-store.series({
-  boop: [(prev: number[]) => [4, ...prev], (prev: number[]) => [5, ...prev]],
-});
