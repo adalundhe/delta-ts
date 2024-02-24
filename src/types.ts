@@ -87,3 +87,5 @@ export type MutationRequest<
     [Mutation in MutationKey<T>]: StoreValue<T, K>;
   }>;
 }>;
+
+export type Listener = () => void;

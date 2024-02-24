@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'use-sync-external-store/shim'
 import useSyncExports from "use-sync-external-store/shim/with-selector";
 import { Atom } from "./atom";
 import { Store } from "./store";
-import { AtomStore, StoreApi } from "./types";
+import { AtomStore, StoreApi, Listener } from "./types";
 
 const { useSyncExternalStoreWithSelector } = useSyncExports;
 
@@ -18,17 +18,17 @@ export const compare = <V>({
 }) => is({ prev, next });
 
 const createImpl = <T extends StoreApi<T>>(store: Store<T>, init: T) => {
-  const useCreatedStore = (
-    selector: (state: T) => any,
-    comparator?: ({ next, prev }: { next: T; prev: T }) => boolean,
+  const useCreatedStore = <U>(
+    selector: (state: T) => U,
+    comparator?: ({ next, prev }: { next: U; prev: U }) => boolean,
   ) => {
     return useSyncExternalStoreWithSelector(
-      (callback) => store.subscribe(callback),
+      (callback: Listener) => store.subscribe(callback),
       () => store.getStore(),
       () => init,
-      (state: T) => selector(state) as T,
+      (state: T) => selector(state),
       comparator
-        ? (a: T, b: T) =>
+        ? (a: U, b: U) =>
             comparator({
               next: a,
               prev: b,

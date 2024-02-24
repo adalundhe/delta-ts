@@ -1,7 +1,18 @@
 import { create, compare, atom } from "../src/react";
 
 
-const useMyCustomStore = create({
+interface Store {
+  boop: {
+    value: number[],
+    concat: (next: number[]) => (prev: number[]) => Promise<number[]>,
+  },
+  beep: {
+    value: string,
+    concat: (next: string) => (prev: string) => string,
+  }
+}
+
+const useMyCustomStore = create<Store>({
   boop: {
     value: [] as number[],
     concat: (next: number[]) => async (prev: number[]) => prev.concat(next),
@@ -12,25 +23,24 @@ const useMyCustomStore = create({
   }
 })
 
-const { boop } = useMyCustomStore((store) => ({
-  beep: {
-    value: store.beep.value
-  }
+const { beep } = useMyCustomStore(({
+  beep
+}) => ({
+  beep: beep.value,
+  concat: beep.concat
 }), ({ prev, next }) => compare({
-  prev: prev.beep.value,
-  next: next.beep.value,
+  prev: prev.beep,
+  next: next.beep,
   is: ({ prev, next }) => next.length > prev.length
 }));
 
 
+
 const useMyAtom = atom({
-  value: boop.value,
-  update: (value: number[]) => value.concat([0])
+  value: beep,
+  update: (value: string) => value.toLowerCase()
 })
 
-// const { value, update } = atom(boop)(({ value }) => ({
-//   value: value.length > 0 ? value : [0, 1, 2, 3],
-//   update: (next: number[]) => value.concat(next),
-// }));
+const { value, update } = useMyAtom()
 
-// update(value);
+console.log(value, update)
