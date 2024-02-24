@@ -1,2 +1,2 @@
 export const AsyncFunction = (async () => {}).constructor;
-export const GeneratorFunction = (function* () {}).constructor;
+export const GeneratorFunction = function* () {}.constructor;
