@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore } from "react";
-import useSyncExports from "use-sync-external-store/shim/with-selector";
+import useSyncExports from "use-sync-external-store/shim/with-selector.js";
 import { Atom } from "./atom.ts";
 import { Store } from "./store.ts";
 import { AtomStore, StoreApi, Listener } from "./types.ts";

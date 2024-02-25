@@ -14,7 +14,7 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "build": "tsc && vite build",
+    "build": "tsup",
     "build:watch": "tsc && vite build --watch",
     "dev": "vite",
     "type-check": "tsc",
