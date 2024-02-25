@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "A modern version of the Delta state manager - written for TS and with the use of React Hooks.",
   "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
-    "./package.json": "./package.json",
     ".": {
       "require": "./dist/index.js",
       "import": "./dist/index.mjs",
@@ -14,7 +14,7 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "build": "tsc && vite build",
+    "build": "tsup src/*.ts && rm ./dist/index.d.mts",
     "build:watch": "tsc && vite build --watch",
     "dev": "vite",
     "type-check": "tsc",
@@ -46,7 +46,6 @@
     "@types/react": "^18.2.57",
     "@types/use-sync-external-store": "^0.0.6",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
-    "@vitejs/plugin-react": "^4.2.1",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-import-resolver-alias": "^1.1.2",
@@ -55,12 +54,11 @@
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "prettier": "^3.2.5",
-    "turbo": "^1.12.4",
-    "typescript": "^5.3.3",
-    "vite": "^5.1.4",
-    "vite-plugin-dts": "^3.7.3",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "tsup": "^8.0.2",
+    "turbo": "^1.12.4",
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "use-sync-external-store": "^1.2.0"

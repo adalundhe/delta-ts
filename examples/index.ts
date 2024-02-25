@@ -6,4 +6,3 @@ const store = Store.init({
     update: (prev: number[]) => (next: number[]) => prev.concat(next),
   },
 });
-
