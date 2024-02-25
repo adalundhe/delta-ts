@@ -1,8 +1,8 @@
 import {
   Listener,
   Store
-} from "./types";
-import useSyncExports from "use-sync-external-store/shim/with-selector";
+} from "./types.ts";
+import useSyncExports from "use-sync-external-store/shim/with-selector.js";
 
 const { useSyncExternalStoreWithSelector } = useSyncExports;
 
