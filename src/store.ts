@@ -6,14 +6,12 @@ import {
   StoreKey,
   StoreMutations,
   StoreValue,
-} from "./types";
+} from "./types.ts";
 
-const isAsync = <T>(call: T) => (
-  call instanceof AsyncFunction &&
-  AsyncFunction !== Function &&
-  AsyncFunction !== GeneratorFunction
-) === true
-
+const isAsync = <T>(call: T) =>
+  (call instanceof AsyncFunction &&
+    AsyncFunction !== Function &&
+    AsyncFunction !== GeneratorFunction) === true;
 
 class Store<T extends StoreApi<T>> {
   private state: StoreData<T>;
@@ -47,17 +45,15 @@ class Store<T extends StoreApi<T>> {
         ] as StoreMutations<T>[typeof mutationKey];
         this.mutators[mutationKey] = mutator;
 
-        if (
-          isAsync(mutator) || isAsync(mutator(null as any))
-        ) {
+        if (isAsync(mutator) || isAsync(mutator(null as any))) {
           const assembledMutation = async (next: StoreValue<T, keyof T>) => {
             const { value } = this.assembled[key];
             const mutation =
               this.mutators[mutationKey as unknown as MutationKey<T>];
 
-            const nextVal = await mutation(next)(
+            const nextVal = (await mutation(next)(
               value as StoreValue<T, keyof T>,
-            ) as typeof value;
+            )) as typeof value;
 
             const update = Object.assign(this.assembled[key], {
               value: nextVal,
@@ -87,7 +83,7 @@ class Store<T extends StoreApi<T>> {
             const update = Object.assign(this.assembled[key], {
               value: nextVal,
             });
-            
+
             this.assembled = Object.assign({}, this.assembled, update);
 
             this.subscribers.forEach((callback) => callback());

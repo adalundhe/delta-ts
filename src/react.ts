@@ -2,8 +2,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import useSyncExports from "use-sync-external-store/shim/with-selector.js";
 import { Atom } from "./atom.ts";
 import { Store } from "./store.ts";
-import { StoreApi, Listener } from "./types.ts";
-
+import { Listener, StoreApi } from "./types.ts";
 
 const { useSyncExternalStoreWithSelector } = useSyncExports;
 
@@ -42,62 +41,54 @@ const createImpl = <T extends StoreApi<T>>(store: Store<T>, init: T) => {
 
 export const useAtom = <T>(
   atom: T,
-  update: (set: (next: T) => T) => (next: T) => T | Promise<T>
+  update: (set: (next: T) => T) => (next: T) => T | Promise<T>,
 ) => {
-  const atomStore = useMemo(
-    () =>
-      new Atom<T>(atom, update),
-    [atom, update],
-  );
+  const atomStore = useMemo(() => new Atom<T>(atom), [atom]);
 
-  const setUpdate = update(atomStore.set)
-  
+  const set = (next: T) => {
+    atomStore.value = next;
+    atomStore.subscribers.forEach((callback) => callback());
+    return next;
+  };
+
+  const setUpdate = update(set);
 
   return [
     useSyncExternalStore(
       (callback) => atomStore.subscribe(callback),
       () => atomStore.getState(),
       () => atomStore.getState(),
-    ).value,
-    setUpdate
-  ] as [
-    T,
-    typeof atomStore.update
-  ]
+    ),
+    setUpdate,
+  ] as [T, typeof setUpdate];
 };
 
 const createAtomImpl = <T>(
-  atom: T,
-  update: (set: (next: T) => T) => (next: T) => T | Promise<T>
+  atomStore: Atom<T>,
+  update: (next: T) => T | Promise<T>,
 ) => {
-
-
-  const atomStore = new Atom<T>(atom, update);
-  const init = atomStore.getState()
+  const init = atomStore.getState();
 
   const useCreatedStore = <U>(
-    selector: ({
-      value,
-      setState
-    }: {
-      value: T,
-      setState: typeof atomStore.update
-    }) => U,
+    selector: (value: T) => U,
     comparator?: ({ next, prev }: { next: U; prev: U }) => boolean,
   ) => {
-    return useSyncExternalStoreWithSelector(
-      (callback: Listener) => atomStore.subscribe(callback),
-      () => atomStore.getState(),
-      () => init,
-      selector,
-      comparator
-        ? (a: U, b: U) =>
-            comparator({
-              next: a,
-              prev: b,
-            })
-        : undefined,
-    );
+    return [
+      useSyncExternalStoreWithSelector(
+        (callback: Listener) => atomStore.subscribe(callback),
+        () => atomStore.getState(),
+        () => init,
+        selector,
+        comparator
+          ? (a: U, b: U) =>
+              comparator({
+                next: a,
+                prev: b,
+              })
+          : undefined,
+      ),
+      update,
+    ] as [U, typeof update];
   };
 
   return useCreatedStore;
@@ -105,10 +96,18 @@ const createAtomImpl = <T>(
 
 export const atom = <T>(
   atom: T,
-  update: (set: (next: T) => T) => (next: T) => T | Promise<T>
+  update: (set: (next: T) => T) => (next: T) => T | Promise<T>,
 ) => {
-  
-  return createAtomImpl(atom, update);
+  const atomStore = new Atom<T>(atom);
+
+  const set = (next: T) => {
+    atomStore.value = next;
+    atomStore.subscribers.forEach((callback) => callback());
+    return next;
+  };
+
+  const assembledUpdate = update(set);
+  return createAtomImpl(atomStore, assembledUpdate);
 };
 
 export const create = <T extends StoreApi<T>>(init: T) => {

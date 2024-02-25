@@ -37,25 +37,16 @@ const { beep } = useMyCustomStore(
 
 const useMyAtom = atom<typeof beep>(
   beep,
-  (set) => async (next: string) => set(next)
+  (set) => async (next: string) => set(next),
 );
 
-const {
-  value,
-  update
-} = useMyAtom((state) => ({
-  value: state,
-  update: state.setState
-}));
+const [value, update] = useMyAtom((state) => state);
 
-console.log(update(value + 'Test'));
+console.log(update(value + "Test"));
 
-
-const test = (set) => async (next: string) => set(next)
-
-
+const test = (set) => async (next: string) => set(next);
 
 const [myValue, setState] = useAtom(
-  beep, 
-  (set) => async (next: string) => set(next)
-)
+  beep,
+  (set) => async (next: string) => set(next),
+);
