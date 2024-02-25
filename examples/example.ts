@@ -1,4 +1,4 @@
-import { create, compare, atom } from "../src/react";
+import { create, compare, atom, useAtom } from "../src/react";
 
 interface Store {
   boop: {
@@ -35,11 +35,18 @@ const { beep } = useMyCustomStore(
     }),
 );
 
-const useMyAtom = atom({
-  value: beep,
-  update: (value: string) => value.toLowerCase(),
-});
+const useMyAtom = atom<typeof beep>(
+  beep,
+  (set) => async (next: string) => set(next),
+);
 
-const { value, update } = useMyAtom();
+const [value, update] = useMyAtom((state) => state);
 
-console.log(value, update);
+console.log(update(value + "Test"));
+
+const test = (set) => async (next: string) => set(next);
+
+const [myValue, setState] = useAtom(
+  beep,
+  (set) => async (next: string) => set(next),
+);

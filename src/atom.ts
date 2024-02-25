@@ -1,13 +1,8 @@
-import { AtomStore } from "./types.ts";
-
-class Atom<T extends AtomStore<T>, K extends T["value"]> {
-  private value;
-  private updateFn?: (value: K) => K;
-  private subscribers: Set<() => void>;
-
-  constructor({ value, update }: { value: K; update?: (value: K) => K }) {
+class Atom<T> {
+  value: T;
+  subscribers: Set<() => void>;
+  constructor(value: T) {
     this.value = value;
-    this.updateFn = update;
     this.subscribers = new Set();
   }
   subscribe(callback: () => void) {
@@ -15,18 +10,12 @@ class Atom<T extends AtomStore<T>, K extends T["value"]> {
     return () => this.subscribers.delete(callback);
   }
 
-  update(value: K) {
-    this.value = this.updateFn ? this.updateFn(value) : value;
-    this.subscribers.forEach((callback) => callback());
-    return this.value;
+  getSubscribers() {
+    return this.subscribers;
   }
 
-  getValue() {
+  getState() {
     return this.value;
-  }
-
-  setUpdateFn(update: (value: K) => K) {
-    this.updateFn = update;
   }
 }
 

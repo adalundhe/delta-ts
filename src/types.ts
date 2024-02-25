@@ -76,7 +76,11 @@ export type StoreMutations<T extends StoreApi<T>> = Record<
 >;
 
 export type AtomStore<T> = {
-  value: T[keyof T];
+  value: T[Exclude<keyof T, "update">];
+  update: AtomMutation<
+    T[Exclude<keyof T, "update">],
+    T[Exclude<keyof T, "value">]
+  >;
 };
 
 export type MutationRequest<
@@ -89,3 +93,35 @@ export type MutationRequest<
 }>;
 
 export type Listener = () => void;
+
+export type AtomMutation<V, P> = P extends (
+  set: (next: V) => V,
+) => (next: V) => V
+  ? (set: (next: V) => V) => (next: V) => V
+  : (set: (next: V) => V) => (next: V) => Promise<V>;
+
+export type Mutation<
+  T extends StoreApi<T>,
+  K extends keyof T,
+  M extends Exclude<keyof StoreApi<T>[K], "value">,
+  P,
+> = StoreApi<T>[K][M] &
+  (P extends (
+    set: (state: StoreValue<T, K>) => StoreValue<T, K>,
+  ) => (next: StoreValue<T, K>) => StoreValue<T, K>
+    ? (
+        set: (state: StoreValue<T, K>) => StoreValue<T, K>,
+      ) => (next: StoreValue<T, K>) => StoreValue<T, K>
+    : (
+        set: (state: StoreValue<T, K>) => StoreValue<T, K>,
+      ) => (next: StoreValue<T, K>) => Promise<StoreValue<T, K>>);
+
+export type AssembledMutation<
+  T extends StoreApi<T>,
+  K extends keyof T,
+  M extends Exclude<keyof StoreApi<T>[K], "value">,
+  P,
+> = StoreApi<T>[K][M] &
+  (P extends (next: StoreValue<T, K>) => StoreValue<T, K>
+    ? (next: StoreValue<T, K>) => StoreValue<T, K>
+    : (next: StoreValue<T, K>) => Promise<StoreValue<T, K>>);
