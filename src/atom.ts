@@ -1,4 +1,4 @@
-import { AtomStore } from "./types";
+import { AtomStore } from "./types.ts";
 
 class Atom<T extends AtomStore<T>, K extends T["value"]> {
   private value;

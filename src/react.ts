@@ -1,9 +1,8 @@
-import { useMemo } from "react";
-import { useSyncExternalStore } from 'use-sync-external-store/shim'
+import { useMemo, useSyncExternalStore } from "react";
 import useSyncExports from "use-sync-external-store/shim/with-selector";
-import { Atom } from "./atom";
-import { Store } from "./store";
-import { AtomStore, StoreApi, Listener } from "./types";
+import { Atom } from "./atom.ts";
+import { Store } from "./store.ts";
+import { AtomStore, StoreApi, Listener } from "./types.ts";
 
 const { useSyncExternalStoreWithSelector } = useSyncExports;
 

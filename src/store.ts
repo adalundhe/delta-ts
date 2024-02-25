@@ -1,4 +1,4 @@
-import { AsyncFunction, GeneratorFunction } from "./async";
+import { AsyncFunction, GeneratorFunction } from "./async.ts";
 import {
   MutationKey,
   StoreApi,
