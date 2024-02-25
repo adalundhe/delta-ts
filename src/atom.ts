@@ -1,20 +1,16 @@
-class Atom<T, U> {
+class Atom<T> {
   private value: T;
   private subscribers: Set<() => void>;
-  update: (U extends (
-    next: T,
-  ) => (prev: T) => T
-    ? (next: T) => T
-    : (next: T) => Promise<T>)
+  update: (next: T) => void
   constructor(
     value: T,
-    update: (set: (next: T) => T) => (next: T) => T | Promise<T>
+    update: (set: (next: T) => T) => (next: T) => void
   ) {
     this.value = value;
     this.subscribers = new Set();
-    
-    this.update = update(this.set) as typeof this.update
 
+    this.update = update(this.set)
+  
   }
   subscribe(callback: () => void) {
     this.subscribers.add(callback);
@@ -25,7 +21,7 @@ class Atom<T, U> {
     return this.subscribers
   }
 
-  private set(next: T){
+  set(next: T){
     this.value = next
     this.subscribers.forEach((callback) => callback())
     return this.value
