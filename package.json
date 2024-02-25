@@ -1,20 +1,22 @@
 {
   "name": "delta-state",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A modern version of the Delta state manager - written for TS and with the use of React Hooks.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "type": "module",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs",
-      "types": "./dist/index.d.ts"
-    }
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "build": "tsup && rm ./dist/index.d.mts",
+    "build": "tsup",
     "build:watch": "tsc && vite build --watch",
     "dev": "vite",
     "type-check": "tsc",
