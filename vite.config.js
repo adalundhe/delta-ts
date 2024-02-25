@@ -9,7 +9,7 @@ export default defineConfig({
     lib: {
       entry: path.resolve(__dirname, "src/index.ts"),
       name: "delta-state",
-      formats: ["es", "cjs", "umd", "iife"],
+      formats: ["es", "cjs"],
       fileName: (format) => `index.${format}.js`,
     },
     rollupOptions: {
@@ -17,11 +17,10 @@ export default defineConfig({
       output: {
         globals: {
           "use-sync-external-store": "use-sync-external-store"
-        },
-        extend: true
+        }
       },
     },
-    minify: false
+    minify: false,
   },
   plugins: [dts(), react()],
 });
