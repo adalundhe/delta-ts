@@ -4,7 +4,7 @@
     "strict": true,
     "jsx": "react-jsx",
     "esModuleInterop": true,
-    "module": "esnext",
+    "module": "ESNext",
     "moduleResolution": "bundler",
     "skipLibCheck": true /* FIXME remove this once vite fixes it */,
     "allowImportingTsExtensions": true,
@@ -12,6 +12,6 @@
     "noEmit": true,
     "baseUrl": ".",
   },
-  "include": ["src/**/*"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }

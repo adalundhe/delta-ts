@@ -9,4 +9,6 @@ export default defineConfig({
   treeshake: true,
   splitting: false,
   cjsInterop: true,
+  sourcemap: 'inline',
+  external: ['use-sync-external-store']
 })
