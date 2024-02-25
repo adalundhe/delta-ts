@@ -42,13 +42,13 @@ const createImpl = <T extends StoreApi<T>>(store: Store<T>, init: T) => {
 export const useAtom = <T>(
   atom: T,
   update: (set: (next: T) => T) => (next: T) => T | Promise<T>,
-  link?: (atom: T) => boolean
+  link?: (atom: T) => T
 ) => {
 
-  const atomStore = link && link(atom) ? useMemo(
+  const atomStore = link ? useMemo(
     () =>
-      new Atom<T>(atom),
-    [atom],
+      new Atom<T>(link(atom)),
+    [atom, link],
   ) : useRef(new Atom<T>(atom)).current;
 
   const set = (next :T) => {
