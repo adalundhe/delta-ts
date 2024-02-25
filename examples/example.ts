@@ -1,52 +1,42 @@
-import { create, compare, atom, useAtom } from "../src/react";
+import { create, compare, atom, useAtom } from "../src";
 
 interface Store {
-  boop: {
-    value: number[];
-    concat: (next: number[]) => (prev: number[]) => Promise<number[]>;
-  };
-  beep: {
-    value: string;
-    concat: (next: string) => (prev: string) => string;
-  };
+  numbers: number[]
+  appendToNumbers: (next: number[]) => void
 }
 
-const useMyCustomStore = create<Store>({
-  boop: {
-    value: [] as number[],
-    concat: (next: number[]) => async (prev: number[]) => prev.concat(next),
-  },
-  beep: {
-    value: "",
-    concat: (next: string) => (prev: string) => prev + next,
-  },
-});
+const useMyCustomStore = create<Store>((set) => ({
+    numbers: [],
+    appendToNumbers: (next: number[]) => set({
+      numbers: next
+    })
+}));
 
-const { beep } = useMyCustomStore(
-  ({ beep }) => ({
-    beep: beep.value,
-    concat: beep.concat,
+const { nums, append } = useMyCustomStore(
+  ({ numbers, appendToNumbers }) => ({
+    nums: numbers,
+    append: appendToNumbers
   }),
   ({ prev, next }) =>
     compare({
-      prev: prev.beep,
-      next: next.beep,
+      prev: prev.nums,
+      next: next.nums,
       is: ({ prev, next }) => next.length > prev.length,
     }),
 );
 
-const useMyAtom = atom<typeof beep>(
-  beep,
-  (set) => async (next: string) => set(next),
+const useMyAtom = atom<typeof nums>(
+  nums,
+  (set) => async (next: number[]) => set(next),
 );
 
 const [value, update] = useMyAtom((state) => state);
 
-console.log(update(value + "Test"));
+console.log(update(value));
 
 const test = (set) => async (next: string) => set(next);
 
 const [myValue, setState] = useAtom(
-  beep,
-  (set) => async (next: string) => set(next),
+  nums,
+  (set) => async (next: number[]) => set(next),
 );

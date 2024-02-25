@@ -1,1 +1,2 @@
-export { atom, create, useAtom, compare } from "./react.ts";
+export { atom, useAtom } from "./atom";
+export { create, compare } from './store'
