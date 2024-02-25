@@ -1,4 +1,4 @@
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore, useRef } from "react";
 import useSyncExports from "use-sync-external-store/shim/with-selector.js";
 import { Atom } from "./atom.ts";
 import { Store } from "./store.ts";
@@ -42,25 +42,34 @@ const createImpl = <T extends StoreApi<T>>(store: Store<T>, init: T) => {
 export const useAtom = <T>(
   atom: T,
   update: (set: (next: T) => T) => (next: T) => T | Promise<T>,
+  link?: (atom: T) => boolean
 ) => {
-  const atomStore = useMemo(() => new Atom<T>(atom), [atom]);
 
-  const set = (next: T) => {
-    atomStore.value = next;
-    atomStore.subscribers.forEach((callback) => callback());
-    return next;
-  };
+  const atomStore = link && link(atom) ? useMemo(
+    () =>
+      new Atom<T>(atom),
+    [atom],
+  ) : useRef(new Atom<T>(atom)).current;
 
-  const setUpdate = update(set);
+  const set = (next :T) => {
+    atomStore.value = next
+    atomStore.subscribers.forEach((callback) => callback())
+    return next
+  }
 
+  const setUpdate = update(set)
+  
   return [
     useSyncExternalStore(
       (callback) => atomStore.subscribe(callback),
       () => atomStore.getState(),
       () => atomStore.getState(),
     ),
-    setUpdate,
-  ] as [T, typeof setUpdate];
+    setUpdate
+  ] as [
+    T,
+    typeof setUpdate
+  ]
 };
 
 const createAtomImpl = <T>(
