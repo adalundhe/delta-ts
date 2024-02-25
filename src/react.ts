@@ -42,35 +42,44 @@ const createImpl = <T extends StoreApi<T>>(store: Store<T>, init: T) => {
 export const useAtom = <T>(
   atom: T,
   update: (set: (next: T) => T) => (next: T) => T | Promise<T>,
-  link?: (source: T, local: T) => T,
+  link?: (source: T, local: T) => T
 ) => {
-  const atomStore = useRef(new Atom(atom)).current;
 
-  const lastLinkedState = useRef(atom);
+  const atomStore = useRef(
+      new Atom(atom)
+    ).current;
 
-  const set = (next: T) => {
-    atomStore.value = next;
-    atomStore.subscribers.forEach((callback) => callback());
-    return next;
-  };
+  const lastLinkedState = useRef(atom)
+  
 
-  const setUpdate = update(set);
+  const set = (next :T) => {
+    atomStore.value = next
+    atomStore.subscribers.forEach((callback) => callback())
+    return next
+  }
+
+  const setUpdate = update(set)
 
   useMemo(() => {
-    if (lastLinkedState.current !== atom && link) {
-      lastLinkedState.current = atom;
-      atomStore.value = link(lastLinkedState.current, atomStore.value);
+    if (lastLinkedState.current !== atom && link){
+      lastLinkedState.current = atom
+      atomStore.value = link(lastLinkedState.current, atomStore.value)
     }
+
   }, [atom, atomStore, link]);
 
+  
   return [
     useSyncExternalStore(
       (callback) => atomStore.subscribe(callback),
       () => atomStore.getState(),
       () => atomStore.getState(),
     ),
-    setUpdate,
-  ] as [T, typeof setUpdate];
+    setUpdate
+  ] as [
+    T,
+    typeof setUpdate
+  ]
 };
 
 const createAtomImpl = <T>(
