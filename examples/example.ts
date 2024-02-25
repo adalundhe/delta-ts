@@ -35,11 +35,20 @@ const { beep } = useMyCustomStore(
     }),
 );
 
-const useMyAtom = atom({
-  value: beep,
-  update: (value: string) => value.toLowerCase(),
-});
+const useMyAtom = atom<typeof beep>(
+  beep,
+  (set) => (next: string) => {
 
-const { value, update } = useMyAtom();
+    return set(next)
+  }
+);
 
-console.log(value, update);
+const {
+  value,
+  update
+} = useMyAtom((state) => ({
+  value: state,
+  update: state.setState
+}));
+
+console.log(update(value + 'Test'));

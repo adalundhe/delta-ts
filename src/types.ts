@@ -75,8 +75,11 @@ export type StoreMutations<T extends StoreApi<T>> = Record<
   >
 >;
 
+
+
 export type AtomStore<T> = {
-  value: T[keyof T];
+  value: T[Exclude<keyof T, 'update'>];
+  update: AtomMutation<T[Exclude<keyof T, 'update'>], T[Exclude<keyof T, 'value'>]>
 };
 
 export type MutationRequest<
@@ -89,3 +92,13 @@ export type MutationRequest<
 }>;
 
 export type Listener = () => void;
+
+
+export type AtomMutation<
+  V,
+  P,
+> = (P extends (
+    next: V,
+  ) => (prev: V) => V
+    ? (next: V) => V
+    : (next: V) => Promise<V>);
