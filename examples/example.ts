@@ -42,7 +42,6 @@ const customAsyncStore = createAsync<AsyncStore>(async () => ({
 }))
 
 const example = async () => {
-
   const useMyCustomAsyncStore = await customAsyncStore
 
   const {
@@ -57,7 +56,6 @@ const example = async () => {
   }))
 
   const [nums, setMyNums] = useMyAsyncNums((nums) => nums)
-
   const [derived, setDerived] = useMyDerivedNums(
     nums, 
     (set) => (next: number[]) => set(next.concat(nums)),
