@@ -320,7 +320,7 @@ Let's cover some tricks and techniques for Delta!
 
 #### Linking 🔗
 
-One of the primary advantages of Delta we first mentioned was <i>composable state</i> by combining stores and atoms. One of the important features of Delta's atoms is that, like Jotai, atoms can be derived from any piece of state - including other atoms. Unlike Jotai, atoms in Delta are also designed to respond to changes in derived state.
+One of the primary advantages of Delta we first mentioned was <i>composable state</i> by combining stores and atoms. One of the important features of Delta's atoms is that, like Jotai, atoms can be derived from any piece of state - including other atoms. Unlike Jotai, atoms in Delta allow you to control how they respond to changes in derived state.
 
 Let's look at the counter app below:
 
