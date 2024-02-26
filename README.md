@@ -311,7 +311,6 @@ This achieves exactly what the above example does, but localizes the state to th
 > In general, we recommend using `atom()` when you need to share a discrete piece of state between multiple components and `useAtom()` when that state needs to be local to the component.
 
 <br/>
-<br/>
 
 ----
 ### Recipes 🍲
