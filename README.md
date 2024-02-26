@@ -207,7 +207,7 @@ And like that we've create and consumed our first Delta store!
 
 Using a store to manage a single bit of state naturally seems a bit clunky and cumbersome. This is where Delta's other state management mechanism - atoms - comes in handy.
 
-Unlike full-blown stores, atoms are designed specifically to handle smaller, focused bits of state. Delta offers two ways to instantiate them - via the `atom()` and via the `useAtom()` hook. Let's start with the former:
+Unlike full-blown stores, atoms are designed specifically to handle smaller, focused bits of state. Delta offers two ways to instantiate them - via `atom()` and via the `useAtom()` hook. Let's start with the former:
 
 ```tsx
 // app.tsx
