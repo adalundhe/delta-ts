@@ -105,10 +105,14 @@ const createInternalReference = <T>(
 const createStoreFromState = () => {
 
   const useCreatedStore = <U>(
-    creator: (set: (next: U) => void) => [
-      U,
-      (next: U) => void
-    ]
+    creator: (
+      set: (next: U) => void,
+      get: () => U
+    )
+     => [
+        U,
+        (next: U) => void
+      ]
   ) => {
 
     const createNextAtom = createAtomApi()
@@ -122,7 +126,9 @@ const createStoreFromState = () => {
       return next
     }
 
-    const init = creator(setState)
+    const getState = () => store.value
+
+    const init = creator(setState, getState)
     store.setState(init[0])
     store.update = init[1]
 
@@ -135,38 +141,4 @@ const createStoreFromState = () => {
   return useCreatedStore
 }
 
-const createAsyncStoreFromState = () => {
-
-  const useCreatedAsyncStore = async <U>(
-    creator: (set: (next: U) => void) => Promise<[
-      U,
-      (next: U) => void
-    ]>
-  ) => {
-
-    const createNextAtom = createAtomApi()
-    const store = createNextAtom<U>(
-      {} as U
-    )
-
-    const setState = (next: U) => {
-      store.value = next
-      store.subscribers.forEach((callback: Listener) => callback())
-      return next
-    }
-
-    const init = await creator(setState)
-    store.setState(init[0])
-    store.update = init[1]
-
-    return createInternalReference<U>(
-      store
-    )
-
-  }
-
-  return useCreatedAsyncStore
-}
-
 export const atom = createStoreFromState()
-export const asyncAtom = createAsyncStoreFromState()

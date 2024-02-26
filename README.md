@@ -84,7 +84,7 @@ There's quite a bit above so let's break it down:
 - 3️⃣ Then we pass a function like `(set) => ({ ...initial state here })`, specifying our initial state (including functions to mutate state).
 <br/>
 
-- 4️⃣ We call `set()` inside of the `updateTrainerName()` function. You call this function at any point inside a function you want to mutate store state, passing the updated values (usually a partial object of the original state) you want to update state in the store to.
+- 4️⃣ We call `set()` inside of the `updateTrainerName()` action. You call `set()` at any point inside an action you want to mutate store state, passing the updated values (usually a partial object of the original state).
 <br/>
 
 - 5️⃣ Our call to `create()` returns a function, which we then store in a variable that <b>must</b> named as a custom hook. Recall that for React a hook is any function prefixed with `use` following by a capital letter (i.e. `useMyHook`).
@@ -227,7 +227,7 @@ const TrainerAboutPage = () => {
 ```
 <br/>
 
-Like a store, we call the atom method, pass a type or interface specifying what the type of state we're providing is, pass a function specifying the initial state, and return a custom hook function to consume in a component. Unlike a store, we only need to pass the type of data specific to the atom then specify an initial value and update function that (at some point) calls and passes the updated state to `set()`. 
+Like a store, we call the atom method, pass a type or interface specifying what the type of state we're providing is, pass a function specifying the initial state, and return a custom React hook to consume in a component. Unlike a store, we only need to pass the type of data specific to the atom then specify an initial value and an action to update the atom's state. 
 
 This condensed API is what makes atoms unique - like React's `useState()` all information relevant to the given piece of state are effectively specified inline. Unlike `setState()`, <i>we get to define</i> how that state is updated right in the declaration. This means no matter where an atom is consumed, the mechanism for manipulating its state remains as consistent as possible.
 
@@ -269,7 +269,7 @@ const TrainerAboutPage = () => {
 
 <br/>
 
-Like `useState()`, our call to our atom hook returns a two-element array, with the first item being the state value and the second being the method (we specified) to update that state.
+Like `useState()`, our call to our atom hook returns a two-element array, with the first item being the state value and the second being the action to update that state.
 
 Finally let's examine the `useAtom()` hook:
 
@@ -501,71 +501,49 @@ export default function CounterApp() {
 Delta includes the `DerivedAtom<T>` type, which allows you to pass the useAtom hook as a store item. You can then alias and instantiate an instance of that atom wherever needed!
 <br/>
 
-#### Async Store and Atoms 📡
+#### Comparators and Controlling State Updates
 
-Often you'll want to fetch state for your application from outside sources, and even more often that fetching happens via asynchronous clients. Zustand traditionally forces you to use asynchronous actions to fetch said state. Delta approaches this problem differently - by recognizing that asynchronous operations should occur as close to the initial store state as possible.
-
-Rather than calling `create()` or `atom()`, instead import `createAsync()` or `asyncAtom()`.
+In addition to selectors store and atom hooks you create via `atom()` can take an optional <i><b>comparator</b></i> function that will only allow for store or atom state to be updated if the comparator function returns `true`:
 
 ```tsx
-// app.tsx
+import { create } from 'delta-state'
 
-interface AsyncCounterStore {
-  useCounterAtom: AtomHook<number[]>
+interface Store {
+  counter: number;
+  add: (amount: number) => void
 }
 
-const usePendingAsyncStore = createAsync<AsyncCounterStore>(async () => ({
-  useCounterAtom: await asyncAtom<number>(async (set) => [
-    0,
-    (next: number[]) => set(next + 1)
-  ])
+const useMyCustomStore = create<Store>((set) => ({
+  counter: 0,
+  add: (amount) => set({
+    counter: amount + 1
+  })
 }));
+
 
 const CounterApp = () => {
-    ...
-};
-```
 
+  const { 
+    counter,
+    add
+   } = useMyCustomStore(
+    ({ counter, add }) => ({
+      counter,
+      add
+    }),
 
-To consume the asynchronous store, you'll need to await the the created store.
-
-```tsx
-
-import { createAsync, asyncAtom, DerivedAtom } from 'delta-state'
-import { useEffect } from 'react'
-
-interface AsyncCounterStore {
-  useCounterAtom: AtomHook<number[]>
-};
-
-const pendingAsyncStore = createAsync<AsyncCounterStore>(async () => ({
-  useCounterAtom: await asyncAtom<number>(async (set) => [
-    0,
-    (next: number[]) => set(next + 1)
-  ])
-}));
-
-const CounterApp = async () => {
-
-  const useCounterStore = await pendingAsyncStore;
-
-  const {
-    useCounterAtom
-  } = await useCounterStore(({
-    useCounterAtom
-  }) => ({
-    useCounterAtom
-  }));
-
-  const [counter, setCounter] = useCounterAtom((nums) => nums);
+    // The counter will only update if the next value
+    // of the counter is greater than zero and greater
+    // than its last value.
+    ({ next, prev }) => next.counter > 0 && next > prev
+  );
+  
 
   return (
     <>
       <main>
         <div className="container flex flex-col justify-center items-center">
-          <button 
-            className="my-4 border w-fit p-4" 
-            onClick={() => setCounter(counter)}>
+          <button className="my-4 border w-fit p-4" onClick={() => add(0)}>
             Increment Local Counter
           </button>
           <h1 className="text-center">
@@ -576,4 +554,32 @@ const CounterApp = async () => {
     </>
   );
 }
+
 ```
+
+Comparator functions accept a single object argument containing `next` and `prev` - with `next` being the requested state update and `prev` being the currnet store or atom state - and return a `boolean` (the value of the comparison performed in the function). We recommend using comparators to optimize your application's performance by controlling when state updates and React re-renders occur.
+<br/>
+
+#### Getting State in an Action
+
+Until now, we've been passing the value of `counter` to our `add()` action to update the count. However (like Zustand), we can also access the state of the store within an action via `get()`.
+
+```tsx
+const useCounterStore = create<Store>((set, get) => ({
+  counter: 0,
+  add: () => set({
+    counter: get().counter + 1
+  })
+}));
+```
+
+To access `get()`, just specify it as an argument in addition to `set()`!
+
+<br/>
+
+----
+### Credits and Thanks 🙏
+
+A massive thank you to Pmndrs, the Zustand and Jotai maintainers, and Daishi Kato for creating two wonderful state management libraries that inspired this project. You make writing software fun and worthwhile.
+
+-AL

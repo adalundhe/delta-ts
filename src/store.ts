@@ -6,20 +6,9 @@ import useSyncExports from "use-sync-external-store/shim/with-selector.js";
 
 const { useSyncExternalStoreWithSelector } = useSyncExports;
 
-export const compare = <V>({
-  prev,
-  next,
-  is = ({ prev, next }: { prev: V; next: V }) => prev === next,
-}: {
-  prev: V;
-  next: V;
-  is?: ({ prev, next }: { prev: V; next: V }) => boolean;
-}) => is({ prev, next });
-
 const subscribers = new Set<Listener>()
 
 const createStoreApi = () => {
-
 
   const implementStore = (state: any) => ({
     state,
@@ -68,7 +57,10 @@ const createInternalReference = <T>(store: Store<T>, init: T) => {
 
 const createStoreFromState = () => {
   const useCreatedStore = <U>(
-    creator: (set: (next: Partial<U>) => void) => U
+    creator: (
+      set: (next: Partial<U>) => void,
+      get: () => U
+    ) => U
   ) => {
 
     const createNextStore = createStoreApi()
@@ -84,7 +76,9 @@ const createStoreFromState = () => {
 
     }
 
-    const init = creator(setState)
+    const getState = (): U => store.getState()
+
+    const init = creator(setState, getState)
     store.setState(init)
 
     return createInternalReference<U>(
@@ -99,36 +93,3 @@ const createStoreFromState = () => {
 
 export const create = createStoreFromState()
 
-
-const createAsyncStoreFromState = () => {
-  const useCreatedAsyncStore = async <U>(
-    creator: (set: (next: Partial<U>) => void) => Promise<U>
-  ) => {
-
-    const createNextStore = createStoreApi()
-    const store = createNextStore({})
-
-    const setState = (next: Partial<U>): void => {
-
-      store.setState({
-        ...store.getState(),
-        ...next
-      })
-      store.subscribers.forEach((callback) => callback())
-
-    }
-
-    const init = await creator(setState)
-    store.setState(init)
-
-    return createInternalReference<U>(
-      store,
-      init
-    )
-
-  };
-
-  return useCreatedAsyncStore;
-};
-
-export const createAsync = createAsyncStoreFromState()
