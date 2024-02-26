@@ -227,7 +227,7 @@ const TrainerAboutPage = () => {
 
 Like a store, we call the atom method, pass a type or interface specifying what the type of state we're providing is, pass a function specifying the initial state, and return a custom React hook to consume in a component. Unlike a store, we only need to pass the type of data specific to the atom then specify an initial value and an action to update the atom's state. 
 
-This condensed API is what makes atoms unique - like React's `useState()` all information relevant to the given piece of state are effectively specified inline. Unlike `useState()`, <i>we get to define</i> how that state is updated right in the declaration. This means no matter where an atom is consumed, the mechanism for manipulating its state remains as consistent as possible.
+This condensed API is what makes atoms unique - like React's `useState()` all information relevant to the given piece of state are effectively specified inline. Unlike `useState()`, <i>we get to define how that state is updated right in the declaration</i>. This means no matter where an atom is consumed, the mechanism for manipulating its state remains as consistent as possible.
 
 Continuing below, we call our custom `useTrainerAtom()` hook inside our component, passing a selector like we did when we called our custom store hook:
 
