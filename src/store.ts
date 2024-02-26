@@ -84,8 +84,6 @@ const createStoreFromState = () => {
 
     }
 
-
-    
     const init = creator(setState)
     store.setState(init)
 
@@ -100,3 +98,37 @@ const createStoreFromState = () => {
 };
 
 export const create = createStoreFromState()
+
+
+const createAsyncStoreFromState = () => {
+  const useCreatedAsyncStore = async <U>(
+    creator: (set: (next: Partial<U>) => void) => Promise<U>
+  ) => {
+
+    const createNextStore = createStoreApi()
+    const store = createNextStore({})
+
+    const setState = (next: Partial<U>): void => {
+
+      store.setState({
+        ...store.getState(),
+        ...next
+      })
+      store.subscribers.forEach((callback) => callback())
+
+    }
+
+    const init = await creator(setState)
+    store.setState(init)
+
+    return createInternalReference<U>(
+      store,
+      init
+    )
+
+  };
+
+  return useCreatedAsyncStore;
+};
+
+export const createAsync = createAsyncStoreFromState()

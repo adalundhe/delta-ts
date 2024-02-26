@@ -6,7 +6,9 @@ import { Listener, Atom } from "./types.ts";
 const { useSyncExternalStoreWithSelector } = useSyncExports;
 
 
-const createAtom = <T>(atom: T) => ({
+const createAtom = <T>(
+  atom: T,
+) => ({
   value: atom,
   subscribers: new Set<Listener>(),
   subscribe(callback: Listener) {
@@ -18,8 +20,14 @@ const createAtom = <T>(atom: T) => ({
   },
   getInitState(){
     return atom
+  },
+  setState(state: T){
+    this.value = state
   }
 }) as Atom<T>
+
+
+const createAtomApi = () => createAtom
 
 
 export const useAtom = <T>(
@@ -29,10 +37,8 @@ export const useAtom = <T>(
 ) => {
 
   const atomStore = useRef(createAtom(atom)).current;
-
   const lastLinkedState = useRef(atom)
   
-
   const set = (next :T) => {
     atomStore.value = next
     atomStore.subscribers.forEach((callback) => callback())
@@ -63,55 +69,104 @@ export const useAtom = <T>(
   ]
 };
 
-const createAtomImpl = <T>(
-  atomStore: Atom<T>,
-  update: (next: T) => T | Promise<T>
+const createInternalReference = <T>(
+  atomStore: Atom<T>
 ) => {
-
-
   const init = atomStore.value
 
-  const useCreatedStore = <U>(
-    selector: (value: T) => U,
-    comparator?: ({ next, prev }: { next: U; prev: U }) => boolean,
+  const useCreatedStore = (
+    selector: (value: T) => T,
+    comparator?: ({ next, prev }: { next: T; prev: T }) => boolean
   ) => {
-    return [ 
+    return [
       useSyncExternalStoreWithSelector(
         (callback: Listener) => atomStore.subscribe(callback),
         () => atomStore.value,
         () => init,
         selector,
         comparator
-          ? (a: U, b: U) =>
+          ? (a: T, b: T) =>
               comparator({
                 next: a,
                 prev: b,
               })
           : undefined,
       ),
-      update
+      atomStore.update
     ] as [
-      U,
-      typeof update
+      T,
+      (next: T) => void
     ]
   };
 
   return useCreatedStore;
 };
 
-export const atom = <T>(
-  atom: T,
-  update: (set: (next: T) => T) => (next: T) => T | Promise<T>
-) => {
-  
-  const atomStore = createAtom(atom)
+const createStoreFromState = () => {
 
-  const set = (next :T) => {
-    atomStore.value = next
-    atomStore.subscribers.forEach((callback) => callback())
-    return next
+  const useCreatedStore = <U>(
+    creator: (set: (next: U) => void) => [
+      U,
+      (next: U) => void
+    ]
+  ) => {
+
+    const createNextAtom = createAtomApi()
+    const store = createNextAtom<U>(
+      {} as U
+    )
+
+    const setState = (next: U) => {
+      store.value = next
+      store.subscribers.forEach((callback: Listener) => callback())
+      return next
+    }
+
+    const init = creator(setState)
+    store.setState(init[0])
+    store.update = init[1]
+
+    return createInternalReference<U>(
+      store
+    )
+
   }
 
-  const assembledUpdate = update(set)
-  return createAtomImpl(atomStore, assembledUpdate);
-};
+  return useCreatedStore
+}
+
+const createAsyncStoreFromState = () => {
+
+  const useCreatedAsyncStore = async <U>(
+    creator: (set: (next: U) => void) => Promise<[
+      U,
+      (next: U) => void
+    ]>
+  ) => {
+
+    const createNextAtom = createAtomApi()
+    const store = createNextAtom<U>(
+      {} as U
+    )
+
+    const setState = (next: U) => {
+      store.value = next
+      store.subscribers.forEach((callback: Listener) => callback())
+      return next
+    }
+
+    const init = await creator(setState)
+    store.setState(init[0])
+    store.update = init[1]
+
+    return createInternalReference<U>(
+      store
+    )
+
+  }
+
+  return useCreatedAsyncStore
+}
+
+export const atom = createStoreFromState()
+export const asyncAtom = createAsyncStoreFromState()

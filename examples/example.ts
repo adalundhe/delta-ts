@@ -1,42 +1,67 @@
-import { create, compare, atom, useAtom } from "../src";
+import { link } from "fs";
+import { 
+  create, 
+  atom, 
+  AtomHook, 
+  createAsync, 
+  asyncAtom,
+  useAtom,
+  DerivedAtom
+} from "../src";
 
 interface Store {
-  numbers: number[]
-  appendToNumbers: (next: number[]) => void
+  useMyNums: AtomHook<number[]>
 }
 
-const useMyCustomStore = create<Store>((set) => ({
-    numbers: [],
-    appendToNumbers: (next: number[]) => set({
-      numbers: next
-    })
+interface AsyncStore {
+  useMyAsyncNums: AtomHook<number[]>
+  useMyDerivedNums: DerivedAtom<number[]>
+}
+
+const useMyCustomStore = create<Store>(() => ({
+  useMyNums: atom<number[]>((set) => [
+    [],
+    (next: number[]) => set(next)
+  ])
 }));
 
-const { nums, append } = useMyCustomStore(
-  ({ numbers, appendToNumbers }) => ({
-    nums: numbers,
-    append: appendToNumbers
-  }),
-  ({ prev, next }) =>
-    compare({
-      prev: prev.nums,
-      next: next.nums,
-      is: ({ prev, next }) => next.length > prev.length,
-    }),
+const { useMyNums } = useMyCustomStore(
+  ({ useMyNums }) => ({
+    useMyNums
+  })
 );
 
-const useMyAtom = atom<typeof nums>(
-  nums,
-  (set) => async (next: number[]) => set(next),
-);
+const [myNums, setMyNums] = useMyNums((state) => state)
 
-const [value, update] = useMyAtom((state) => state);
+const customAsyncStore = createAsync<AsyncStore>(async () => ({
+  useMyAsyncNums: await asyncAtom<number[]>(async (set) => [
+    [],
+    (next: number[]) => set(next)
+  ]),
+  useMyDerivedNums: useAtom
+}))
 
-console.log(update(value));
+const example = async () => {
 
-const test = (set) => async (next: string) => set(next);
+  const useMyCustomAsyncStore = await customAsyncStore
 
-const [myValue, setState] = useAtom(
-  nums,
-  (set) => async (next: number[]) => set(next),
-);
+  const {
+    useMyAsyncNums,
+    useMyDerivedNums
+  } = await useMyCustomAsyncStore(({
+    useMyAsyncNums,
+    useMyDerivedNums
+  }) => ({
+    useMyAsyncNums,
+    useMyDerivedNums
+  }))
+
+  const [nums, setMyNums] = useMyAsyncNums((nums) => nums)
+
+  const [derived, setDerived] = useMyDerivedNums(
+    nums, 
+    (set) => (next: number[]) => set(next.concat(nums)),
+    (source, next) => source.concat(next)
+  )
+
+}

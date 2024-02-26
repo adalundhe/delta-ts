@@ -8,5 +8,6 @@ export default defineConfig({
   format: ['cjs', 'esm'],
   treeshake: true,
   splitting: false,
-  cjsInterop: true
+  cjsInterop: true,
+  minify: true
 })  

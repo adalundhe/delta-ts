@@ -1,2 +1,3 @@
-export { atom, useAtom } from "./atom.ts";
-export { create, compare } from './store.ts'
+export { atom, useAtom, asyncAtom } from "./atom.ts";
+export { create, compare, createAsync } from './store.ts'
+export { AtomHook, DerivedAtom } from './types.ts'
