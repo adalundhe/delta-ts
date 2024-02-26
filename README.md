@@ -316,7 +316,7 @@ This achieves exactly what the above example does, but localizes the state to th
 ----
 ### Recipes 🍲
 
-Let's cover some tricks and techniques for delta!
+Let's cover some tricks and techniques for Delta!
 <br/>
 
 #### Linking 🔗
