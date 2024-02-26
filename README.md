@@ -140,14 +140,12 @@ Let's again break down what we've done:
 <br/>
 
 - 4️⃣ Our hook returned an object representing the state slice we specified, which we then deconstructed to directly access returned items via the aliases we specified.
-<br/>
-<br/>
 
+<br/>
 
 > <b>Why Require Selectors?</b> 💡 
 > 
 > If you're coming from Zustand, you'll remember that selectors are optional when calling store hooks. Zustand maintainers themselves discourage this as it returns all state in a given store, so Delta opts to make passing selectors to store hooks required.
-
 <br/>
 
 Putting it all together, our solutions looks like:
