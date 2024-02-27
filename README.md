@@ -1,7 +1,11 @@
 ![build](https://github.com/adalundhe/delta-ts/actions/workflows/build_and_test.yml/badge.svg)
-[![npm version](https://badge.fury.io/js/delta-state.svg)](https://badge.fury.io/js/delta-state)
+![npm version](https://img.shields.io/npm/v/delta-state?color=28920
+)
+![downloads](https://img.shields.io/npm/dt/delta-state?color=961866)
 ![bundle size](https://img.shields.io/bundlephobia/minzip/delta-state)
+![unpacked size](https://img.shields.io/npm/unpacked-size/delta-state?label=unpacked%20size&color=843382)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
+
 
 # delta 🌌
 
