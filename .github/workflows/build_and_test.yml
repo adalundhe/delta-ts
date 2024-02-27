@@ -6,12 +6,7 @@ on:
       - 'main'
     paths:
       - package.json
-  pull_request:
-    branches:
-      - 'main'
-    paths:
-      - package.json
-
+      
 env:
   NODE_VERSION: 20
   PNPM_VERSION: 8
