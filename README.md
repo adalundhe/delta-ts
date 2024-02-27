@@ -1,6 +1,7 @@
 ![build](https://github.com/adalundhe/delta-ts/actions/workflows/build_and_test.yml/badge.svg)
 [![npm version](https://badge.fury.io/js/delta-state.svg)](https://badge.fury.io/js/delta-state)
 ![bundle size](https://deno.bundlejs.com/badge?q=delta-state&treeshake=[*])
+[![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 
 # delta 🌌
 
