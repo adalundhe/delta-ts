@@ -95,9 +95,7 @@ const createStoreFromState = () => {
   return useCreatedStore;
 };
 
-export const create = createStoreFromState();
-
-const createInternalAsyncReference = <T>(store: Store<T>) => {
+const createInternalBaseReference = <T>(store: Store<T>) => {
   const useCreatedStore = <U>(
     selector: (state: T) => U,
     comparator?: ({ next, prev }: { next: U; prev: U }) => boolean,
@@ -134,6 +132,24 @@ const createInternalAsyncReference = <T>(store: Store<T>) => {
         });
     };
 
+    const callbackWithComparator = (
+      callbackComparator: ({
+        next,
+        prev
+      }:{
+        next: U,
+        prev: U
+      }) => boolean,
+      subscriptionCallback: (next: U) => void
+    ) => {
+      const currentState = store.getState()
+      
+      store.subscribers.add((state) => callbackComparator({
+        next: state as U,
+        prev: currentState as any
+      }) && subscriptionCallback(state as U));
+    }
+
     return {
       ...selection,
       get() {
@@ -148,8 +164,22 @@ const createInternalAsyncReference = <T>(store: Store<T>) => {
           });
         });
       },
-      subscribe(callback: (next: U) => void) {
-        store.subscribers.add(callback as (state: Partial<T>) => void);
+      subscribe(
+        callback: (next: U) => void,
+        callbackComparator?: ({
+          next,
+          prev
+        }:{
+          next: U,
+          prev: U
+        }) => boolean
+      ) {
+        callbackComparator ? callbackWithComparator(
+          callbackComparator,
+          callback
+        ) : store.subscribers.add(
+            callback as (state: any) => void
+          );
       },
     };
   };
@@ -177,10 +207,41 @@ const createAsyncStoreFromState = () => {
       next: init,
     });
 
-    return createInternalAsyncReference<U>(store);
+    return createInternalBaseReference<U>(store);
   };
 
   return useCreatedStore;
 };
 
+
+
+const createBaseStoreFromState = () => {
+  const useCreatedStore = <U>(
+    creator: (set: (next: Partial<U>) => void, get: () => U) => U,
+  ) => {
+    const createNextStore = createStoreApi();
+    const store = createNextStore<U>({} as any);
+
+    const setState = (next: Partial<U>): void => {
+      store.subscribers.forEach((callback) => {
+        callback(next);
+      });
+    };
+
+    const getState = (): U => store.getState();
+
+    const init = creator(setState, getState);
+    store.setState({
+      next: init,
+    });
+
+    return createInternalBaseReference<U>(store);
+  };
+
+  return useCreatedStore;
+};
+
+
+export const create = createStoreFromState();
 export const createAsync = createAsyncStoreFromState();
+export const createBase = createBaseStoreFromState()

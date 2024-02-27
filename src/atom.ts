@@ -112,7 +112,7 @@ const createStoreFromState = () => {
   return useCreatedStore;
 };
 
-const createInternalAsyncReference = <T>(atomStore: Atom<T>) => {
+const createInternalBaseReference = <T>(atomStore: Atom<T>) => {
   const useCreatedStore = <U>(
     selector: (state: T) => U,
     comparator?: ({ next, prev }: { next: U; prev: U }) => boolean,
@@ -142,6 +142,24 @@ const createInternalAsyncReference = <T>(atomStore: Atom<T>) => {
       shouldUpdate && atomStore.setState(next);
     };
 
+    const callbackWithComparator = (
+      callbackComparator: ({
+        next,
+        prev
+      }:{
+        next: U,
+        prev: U
+      }) => boolean,
+      subscriptionCallback: (next: T) => void
+    ) => {
+      const currentState = atomStore.getState()
+      
+      atomStore.subscribers.add((state) => callbackComparator({
+        next: state as U,
+        prev: currentState as any
+      }) && subscriptionCallback(state as T));
+    }
+
     return [
       selection,
       atomStore.update,
@@ -149,15 +167,37 @@ const createInternalAsyncReference = <T>(atomStore: Atom<T>) => {
         atomStore.subscribe(callback as Listener<Partial<T>>);
         return selector(atomStore.getState());
       },
-      (callback: (next: U) => void) => {
-        atomStore.subscribers.add(callback as (state: Partial<T>) => void);
+      (next: T) => {
+        atomStore.subscribers.forEach((callback) => {
+          callback(next);
+        });
+      },
+      (
+        callback: (next: T) => void,
+        callbackComparator?: ({
+          next,
+          prev
+        }:{
+          next: U,
+          prev: U
+        }) => boolean
+      ) => {
+
+        callbackComparator ? callbackWithComparator(
+          callbackComparator,
+          callback
+        ) : atomStore.subscribers.add(
+            callback as (state: any) => void
+          );
+
       },
     ] as [
       U,
       (next: T) => void,
       () => U,
+      (next: T) => void,
       (
-        callback: (next: U) => void,
+        callback: (next: T) => void,
         comparator?: ({ next, prev }: { next: U; prev: U }) => boolean,
       ) => void,
     ];
@@ -188,7 +228,36 @@ const createAsyncAtomFromState = () => {
     atomStore.setState(init[0]);
     atomStore.update = init[1];
 
-    return createInternalAsyncReference<U>(atomStore);
+    return createInternalBaseReference<U>(atomStore);
+  };
+
+  return useCreatedStore;
+};
+
+
+const createBaseAtomFromState = () => {
+  const useCreatedStore = <U>(
+    creator: (
+      set: (next: U) => void,
+      get: () => U,
+    ) => [U, (next: U) => void],
+  ) => {
+    const createNextAtom = createAtomApi();
+    const atomStore = createNextAtom<U>({} as any);
+
+    const setState = (next: Partial<U>): void => {
+      atomStore.subscribers.forEach((callback) => {
+        callback(next);
+      });
+    };
+
+    const getState = (): U => atomStore.getState();
+
+    const init = creator(setState, getState);
+    atomStore.setState(init[0]);
+    atomStore.update = init[1];
+
+    return createInternalBaseReference<U>(atomStore);
   };
 
   return useCreatedStore;
@@ -196,3 +265,4 @@ const createAsyncAtomFromState = () => {
 
 export const atom = createStoreFromState();
 export const atomAsync = createAsyncAtomFromState();
+export const atomBase = createBaseAtomFromState()

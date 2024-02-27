@@ -38,11 +38,11 @@ const test = async () => {
     (next) => set(next + get()),
   ]);
 
-  const [, add, , subscribeAtom] = myAsyncAtom((value) => value);
+  const [, add, ,, subscribeAtom] = myAsyncAtom((value) => value);
 
   subscribeAtom((next) => {
     console.log(next);
-  });
+  }, ({ next, prev }) => next > prev);
 
   add(1);
 };

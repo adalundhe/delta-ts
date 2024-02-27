@@ -580,6 +580,303 @@ To access `get()`, just specify it as an argument in addition to `set()`!
 <br/>
 
 ----
+### Async Usage Without React 🤖
+
+If you need to use Delta in asynchronous code like React Server Components or Server Actions or independently of React, you can do so via `createAsync()`, `asyncAtom()`, `createBase()`, and `atomBase()`.
+
+Let's start with `createAsync()` - as before we'll create an interface to represent our store's state and actions:
+
+
+```ts
+// async.ts
+
+import { createAsync } from "delta-state";
+
+interface CounterStore {
+  count: number;
+  updateCount: (next: number) => void;
+}
+
+const asyncCounter = async () => {
+  
+}
+
+
+asyncCounter()
+```
+
+Next we'll instantiate an async store instace via `createAsync()`:
+
+
+```ts
+// async.ts
+
+...
+
+const asyncCounter = async () => {
+  
+  // The call to createAsync() returns a Promise so
+  // we'll need to await it if we want to get the
+  // function to use our store.
+  const asyncStore = await createAsync<CounterStore>(
+    
+    // We pass an async function to create our store
+    async (set, get) => ({
+      count: 0,
+      updateCount: (next: number) =>
+        set({
+          count: next + get().count,
+        })
+    })
+  );
+}
+
+asyncCounter()
+```
+
+There are a few important differences! First, when creating async stores, the function you pass <i>must</i> be async. Next, you <i>must</i> await the Promise returned by the call to `createAsync()`
+to access the function to use your store. To continue our example:
+
+```ts
+// async.ts
+
+...
+
+const asyncCounter = async () => {
+
+  const asyncStore = await createAsync<CounterStore>(
+    async (set, get) => ({
+      count: 0,
+      updateCount: (next: number) =>
+        set({
+          count: next + get().count,
+        })
+    })
+  );
+
+  const {
+    count, 
+    updateCount, 
+
+    // By default async stores return two additional
+    // helper functions, get and set, which
+    // function exactly like calling get() and set()
+    // inside an action.
+    get,
+    set
+  } = asyncStore((state) => state);
+
+}
+
+asyncCounter()
+```
+As with normal stores, we return both our value and action. However,
+unlike async stores, our value <b><i>does not automatically update when an action or</i></b> `set()` <b><i>is called</i></b>. In order
+to access the updated store value after calling an action you must call the `get()` method, which (like when calling `get()` inside an action) returns the entire store:
+
+```ts
+// async.ts
+
+...
+
+const asyncCounter = async () => {
+
+  const asyncStore = await createAsync<CounterStore>(
+    async (set, get) => ({
+      count: 0,
+      updateCount: (next: number) =>
+        set({
+          count: next + get().count,
+        })
+    })
+  );
+
+  const {
+    // Let's skip our count here since it
+    // won't be updated
+    updateCount, 
+    get
+  } = asyncStore((state) => state);
+
+  updateCount(1)
+
+  // This is how we get our updated count.
+  const {
+    count
+  } = get()
+
+}
+
+asyncCounter()
+```
+
+We can also update the store by calling `set()`, which works exactly as it does when you call it inside an action:
+
+```ts
+// async.ts
+
+...
+
+const asyncCounter = async () => {
+
+  const asyncStore = await createAsync<CounterStore>(
+    async (set, get) => ({
+      count: 0,
+      updateCount: (next: number) =>
+        set({
+          count: next + get().count,
+        })
+    })
+  );
+
+  const {
+    set
+  } = asyncStore((state) => state);
+
+  // Our count will now be 10.
+  set({
+    count: 10
+  })
+
+}
+
+asyncCounter()
+```
+If you need to access store state changes reactively (i.e. whenever an action or `set()` mutates store state), you can call `subscribe()`, which takes a callback and optional comparator function:
+
+```ts
+// async.ts
+
+...
+
+const asyncCounter = async () => {
+
+  const asyncStore = await createAsync<CounterStore>(
+    async (set, get) => ({
+      count: 0,
+      updateCount: (next: number) =>
+        set({
+          count: next + get().count,
+        })
+    })
+  );
+
+  const {
+    updateCount,
+    set,
+    subscribe
+  } = asyncStore((state) => state);
+
+  // This will trigger on every update.
+  subscribe(({ count }) => {
+    console.log(count);
+  });
+
+  // This will only trigger if we update the count
+  // to 100 more than its previous value.
+  subscribe(({ count }) => {
+    console.log(count);
+  }, ({ next, prev }) => next > prev + 100);
+
+  // Our count will now be 1, triggering the
+  // first subscription but not the second.
+  set({
+    count: 1
+  })
+
+  // This will trigger both our subscriptions.
+  updateCount(100)
+
+}
+
+asyncCounter()
+
+```
+
+We can likewise instantiate async atoms via `atomAsync()`:
+
+```ts
+// async.ts
+
+...
+
+const asyncCounter = async () => {
+
+  ...
+
+  const counterAtom = await atomAsync<number>(async (set, get) => [
+    0,
+    (next) => set(next + get()),
+  ]);
+
+  const [
+    value, 
+    add, 
+    get, 
+    set,
+    subscribe
+  ] = counterAtom((value) => value);
+
+}
+
+asyncAtomCounter()
+
+```
+
+As with async stores, async atoms include `get()`, `set()`, and `subscribe()`, allowing you to manage the atom's state as needed.
+
+If synchronous usage independent of React is required, `createBase()` and `atomBase()` allow you you to instantiate stores and atoms:
+
+```ts
+// sync.ts
+import { createBase } from 'delta-state';
+
+...
+
+const syncCounterStore = () => {
+
+  const syncCounter = createBase<CounterStore>((set, get) => ({
+      count: 0,
+      updateCount: (next: number) =>
+        set({
+          count: next + get().count,
+        })
+    })
+  );
+
+  const {
+    count, 
+    updateCount, 
+    get,
+    set,
+    subscribe
+  } = syncCounter((state) => state);
+
+}
+
+const syncCounterAtom = () => {
+  const counterAtom = atomAsync<number>((set, get) => [
+    0,
+    (next) => set(next + get()),
+  ]);
+
+  const [
+    value, 
+    add, 
+    get, 
+    set,
+    subscribe
+  ] = counterAtom((value) => value);
+}
+
+syncCounterStore()
+syncCounterAtom()
+
+```
+
+The APIs for sync base stores and atoms follow those of their asynchronous counterparts minus the need for async functions and awaiting the store or atom in order to use it.
+
+----
 ### Credits and Thanks 🙏
 
 A massive thank you to Pmndrs, the Zustand and Jotai maintainers, and Daishi Kato for creating two wonderful state management libraries that inspired this project. You make writing software fun and worthwhile.
