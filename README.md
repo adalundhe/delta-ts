@@ -1,3 +1,7 @@
+[![npm version](https://badge.fury.io/js/delta-state.svg)](https://badge.fury.io/js/delta-state)
+
+![bundle_size](https://deno.bundlejs.com/badge?q=delta-state&treeshake=[*])
+
 # delta 🌌
 
 Delta is a Typescript-first, minimal, and composable state manager for React that takes from the best features of 🐻 [Zustand](https://github.com/pmndrs/zustand/tree/main) and 👻 [Jotai](https://github.com/pmndrs/jotai). Combining the concepts of state stores and atoms with a Zustand-like API, Delta lets your state flow the way you want.
