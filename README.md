@@ -1,5 +1,4 @@
 [![npm version](https://badge.fury.io/js/delta-state.svg)](https://badge.fury.io/js/delta-state)
-
 ![bundle_size](https://deno.bundlejs.com/badge?q=delta-state&treeshake=[*])
 
 # delta 🌌
