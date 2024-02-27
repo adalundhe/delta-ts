@@ -84,6 +84,8 @@ const createInternalReference = <T>(atomStore: Atom<T>) => {
     ] as [T, (next: T) => void];
   };
 
+  Object.assign(useCreatedStore, atomStore)
+
   return useCreatedStore;
 };
 
@@ -202,6 +204,8 @@ const createInternalBaseReference = <T>(atomStore: Atom<T>) => {
       ) => void,
     ];
   };
+
+  Object.assign(useCreatedStore, atomStore)
 
   return useCreatedStore;
 };

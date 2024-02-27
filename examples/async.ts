@@ -1,4 +1,4 @@
-import { createAsync, atomAsync } from "../src";
+import { createAsync } from "../src";
 
 interface CounterStore {
   count: number;
@@ -16,35 +16,18 @@ const test = async () => {
     getCount: () => get().count,
   }));
 
-  const { count, updateCount, getCount } = asyncStore((state) => state);
-
-  updateCount(1);
-  updateCount(1);
-
-  const updatedCount = getCount();
-
-  console.log(updatedCount);
 
   const { get, set, subscribe } = asyncStore((state) => state);
 
-  subscribe(({ count }) => {
-    console.log(count);
-  });
+  subscribe(
+    ({ count }) => {
+      console.log(count);
+    }, 
+    ({ next, prev }) => next.count > prev.count + 10
+  );
 
-  set({ count: get().count + 1 });
+  set({ count: get().count + 100 });
 
-  const myAsyncAtom = await atomAsync<number>(async (set, get) => [
-    count,
-    (next) => set(next + get()),
-  ]);
-
-  const [, add, ,, subscribeAtom] = myAsyncAtom((value) => value);
-
-  subscribeAtom((next) => {
-    console.log(next);
-  }, ({ next, prev }) => next > prev);
-
-  add(1);
 };
 
 test();

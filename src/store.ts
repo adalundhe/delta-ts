@@ -65,6 +65,8 @@ const createInternalReference = <T>(store: Store<T>, init: T) => {
     );
   };
 
+  Object.assign(useCreatedStore, store)
+
   return useCreatedStore;
 };
 
@@ -183,6 +185,8 @@ const createInternalBaseReference = <T>(store: Store<T>) => {
       },
     };
   };
+
+  Object.assign(useCreatedStore, store)
 
   return useCreatedStore;
 };
