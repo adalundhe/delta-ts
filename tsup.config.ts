@@ -2,9 +2,7 @@ import { defineConfig } from 'tsup'
 
 export default defineConfig({
   entry: [
-    'src/index.ts',
-    'src/async/index.ts',
-    'src/base/index.ts'
+    'src/index.ts'
   ],
   dts: true,
   outDir: 'dist',

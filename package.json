@@ -1,6 +1,6 @@
 {
   "name": "delta-state",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "A modern version of the Delta state manager - written for TS and with the use of React Hooks.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,6 +10,18 @@
       "require": "./dist/index.js",
       "import": "./dist/index.mjs",
       "types": "./dist/index.d.ts"
+    },
+    "./async": {
+
+      "require": "./dist/async/index.js",
+      "import": "./dist/async/index.mjs",
+      "types": "./dist/async/index.d.ts"
+    },
+    "./base": {
+
+      "require": "./dist/base/index.js",
+      "import": "./dist/base/index.mjs",
+      "types": "./dist/base/index.d.ts"
     }
   },
   "scripts": {
