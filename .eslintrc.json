@@ -96,6 +96,9 @@
           ["^delta-state$", "./src/index.ts"],
           ["delta-state", "./src"]
         ]
+      },
+      "typescript": {
+        "project": "./"
       }
     }
   },
