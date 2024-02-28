@@ -1,44 +1,42 @@
-import { Listener } from './types.ts'
-import { Store } from './types.ts';
-
+import { Listener, Store } from "./types.ts";
 
 export const createStoreApi = () => {
-    const implementStore = <T>(state: T) => ({
-      state,
-      subscribers: new Set<Listener<T>>(),
-      subscribe(callback: Listener<T>) {
-        this.subscribers.add(callback);
-        return () => this.subscribers.delete(callback);
-      },
-      getState() {
-        return this.state;
-      },
-      getInitState() {
-        return state;
-      },
-      setState({
-        next,
-        replace = false,
-      }: {
-        next: Partial<T>;
-        replace?: boolean;
-      }) {
-        const nextState =
-          typeof next === "function"
-            ? (next as (next: T) => T)(next)
-            : (next as T);
-  
-        if (!Object.is(nextState, this.state)) {
-          this.state =
-            replace ?? (typeof nextState !== "object" || nextState === null)
-              ? nextState
-              : Object.assign({}, this.state, nextState);
-        }
-      },
-      delete(callback: Listener<T>) {
-        this.subscribers.delete(callback);
-      },
-    });
+  const implementStore = <T>(state: T) => ({
+    state,
+    subscribers: new Set<Listener<T>>(),
+    subscribe(callback: Listener<T>) {
+      this.subscribers.add(callback);
+      return () => this.subscribers.delete(callback);
+    },
+    getState() {
+      return this.state;
+    },
+    getInitState() {
+      return state;
+    },
+    setState({
+      next,
+      replace = false,
+    }: {
+      next: Partial<T>;
+      replace?: boolean;
+    }) {
+      const nextState =
+        typeof next === "function"
+          ? (next as (next: T) => T)(next)
+          : (next as T);
+
+      if (!Object.is(nextState, this.state)) {
+        this.state =
+          replace ?? (typeof nextState !== "object" || nextState === null)
+            ? nextState
+            : Object.assign({}, this.state, nextState);
+      }
+    },
+    delete(callback: Listener<T>) {
+      this.subscribers.delete(callback);
+    },
+  });
 
   return implementStore;
 };
@@ -49,7 +47,6 @@ const useBaseExternalStoreWithSelector = <Snapshot, Selection>(
   comparator?: (a: Selection, b: Selection) => boolean,
 ) => {
   const callback = (next: Snapshot) => {
-
     const requestedUpdate = {
       ...store.getState(),
       ...(next ? next : {}),
@@ -108,22 +105,19 @@ export const createInternalBaseReference = <T>(store: Store<T>) => {
     };
 
     const callbackWithComparator = (
-      callbackComparator: ({
-        next,
-        prev
-      }:{
-        next: U,
-        prev: U
-      }) => boolean,
-      subscriptionCallback: (next: U) => void
+      callbackComparator: ({ next, prev }: { next: U; prev: U }) => boolean,
+      subscriptionCallback: (next: U) => void,
     ) => {
-      const currentState = store.getState()
-      
-      store.subscribers.add((state) => callbackComparator({
-        next: state as U,
-        prev: currentState as any
-      }) && subscriptionCallback(state as U));
-    }
+      const currentState = store.getState();
+
+      store.subscribers.add(
+        (state) =>
+          callbackComparator({
+            next: state as U,
+            prev: currentState as any,
+          }) && subscriptionCallback(state as U),
+      );
+    };
 
     return {
       ...selection,
@@ -141,25 +135,16 @@ export const createInternalBaseReference = <T>(store: Store<T>) => {
       },
       subscribe(
         callback: (next: U) => void,
-        callbackComparator?: ({
-          next,
-          prev
-        }:{
-          next: U,
-          prev: U
-        }) => boolean
+        callbackComparator?: ({ next, prev }: { next: U; prev: U }) => boolean,
       ) {
-        callbackComparator ? callbackWithComparator(
-          callbackComparator,
-          callback
-        ) : store.subscribers.add(
-            callback as (state: any) => void
-          );
+        callbackComparator
+          ? callbackWithComparator(callbackComparator, callback)
+          : store.subscribers.add(callback as (state: any) => void);
       },
     };
   };
 
-  Object.assign(useCreatedStore, store)
+  Object.assign(useCreatedStore, store);
 
   return useCreatedStore;
 };
@@ -190,5 +175,4 @@ const createBaseStoreFromState = () => {
   return useCreatedStore;
 };
 
-
-export const create = createBaseStoreFromState()
+export const create = createBaseStoreFromState();

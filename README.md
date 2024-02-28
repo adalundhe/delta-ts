@@ -461,10 +461,10 @@ A `link()` is a function accepting two arguments - the first the source state an
 Stores aren't solely for holding application state - they can also be used to generate atoms on-the-fly!
 
 ```tsx
-import { create, useAtom, DerivedAtom } from 'delta-state'
+import { create, useAtom, Atomic } from 'delta-state'
 
 interface CounterStore {
-  counterAtom: DerivedAtom<number>
+  counterAtom: Atomic<number>
 };
 
 const useCounterStore = create<CounterStore>((set) => ({
@@ -479,23 +479,17 @@ export default function CounterApp() {
     useCounterAtom: state.counterAtom
   }));
 
-  const [
-    counter,
-    setCounter
-  ] = useCounterAtom(
-    0,
-    (set) => (next: number) => set(next + 1)
-  );
+  const atom = useCounterAtom(0);
 
   return (
     <>
       <main>
         <div className="container flex flex-col justify-center items-center">
-          <button className="my-4 border w-fit p-4" onClick={() => setCounter(counter)}>
+          <button className="my-4 border w-fit p-4" onClick={() => atom.set((get) => get(atom) + 1)}>
             Increment Local Counter
           </button>
           <h1 className="text-center">
-            {counter}
+            {atom.get()}
           </h1>
         </div>
       </main>
@@ -584,7 +578,7 @@ To access `get()`, just specify it as an argument in addition to `set()`!
 <br/>
 
 ----
-### Async Usage Without React 🤖
+### Async and Usage Without React 🤖
 
 If you need to use Delta in asynchronous code like React Server Components or Server Actions or independently of React, you can do so via `createAsync()`, `asyncAtom()`, `createBase()`, and `atomBase()`.
 

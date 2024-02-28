@@ -1,5 +1,5 @@
 import useSyncExports from "use-sync-external-store/shim/with-selector.js";
-import { Listener, Store } from "src/base/types.ts";
+import { Listener, Store } from "~/base/types.ts";
 
 const { useSyncExternalStoreWithSelector } = useSyncExports;
 
@@ -64,7 +64,7 @@ const createInternalReference = <T>(store: Store<T>, init: T) => {
     );
   };
 
-  Object.assign(useCreatedStore, store)
+  Object.assign(useCreatedStore, store);
 
   return useCreatedStore;
 };
@@ -95,8 +95,5 @@ const createStoreFromState = () => {
 
   return useCreatedStore;
 };
-
-
-
 
 export const create = createStoreFromState();
