@@ -216,7 +216,7 @@ And like that we've create and consumed our first Delta store!
 
 Using a store to manage a single bit of state naturally seems a bit clunky and cumbersome. This is where Delta's other state management mechanism - atoms - comes in handy.
 
-Unlike full-blown stores, atoms are designed specifically to handle smaller, focused bits of state. Delta offers two ways to instantiate them - via the `useAtom()` hook:
+Unlike full-blown stores, atoms are designed specifically to handle smaller, focused bits of state. Let's create an atom via the `useAtom()` hook:
 
 ```tsx
 // app.tsx
@@ -246,9 +246,9 @@ const TrainerAboutPage = () => {
 }
 ```
 
-The `useAtom()` hook returns an atom object, which we can then call `get()` and `set()` on to access and update state.
+We can then call `get()` and `set()` on our atom to access and update state.
 
-This condensed API is what makes atoms unique - like React's `useState()` all information relevant to the given piece of state are effectively specified inline. Unlike `useState()`, the methods to manipulate and retrieve state are owned by the atom, so keeping track of where changes occur and state is being accessed is easier.
+This condensed API is what makes atoms unique - like React's `useState()` all information relevant to the given piece of state are effectively specified inline. Unlike `useState()`, the methods to manipulate and retrieve state are owned by the atom, so keeping track of where changes occur and state is being consumed is easier.
 
 We can do a lot more than just passing values to atoms - `get()`, `set()` and calls to `useAtom()` also accept functions with a helpful (optional) `get()` arg to extract values from other atoms:
 
@@ -327,9 +327,7 @@ Let's cover some tricks and techniques for Delta!
 
 #### Linking 🔗
 
-One of the primary advantages of Delta we first mentioned was <i>composable state</i> by combining stores and atoms. One of the important features of Delta's atoms is that, like Jotai, atoms can be derived from any piece of state - including other atoms. Unlike Jotai, atoms in Delta allow you to control how they respond to changes in derived state.
-
-Let's look at the counter app below:
+One of the primary advantages of Delta we first mentioned was <i>composable state</i> by combining stores and atoms. One of the important features of Delta's atoms is that, like Jotai, atoms can be derived from any piece of state - including other atoms. Let's look at the counter app below:
 
 ```tsx
 import { create, useAtom } from 'delta-state'
@@ -384,7 +382,7 @@ const CounterApp = () => {
 
 Our app above uses a store and an atom created using the `useAtom()` hook to manage the same counter. Since our atom's state is created using the `useAtom()` hook from the state of the store's count value, we refer to the atom as a <i><b>derived atom</i></b>. We want both the "Increment Local" and "Increment Global" buttons to increase our counter. However when we press "Increase Global" nothing happens! What's the deal?!
 
-By default, state of atoms created using `useAtom()` is <i>isolated</i>. This means state managed via an atom created by `useAtom()` can <i>only</i> be updated by calling the update function we provided to that atom. However, we can tell our atom we want it to listen for and update based on changes to source state by providing a `link()`:
+By default, atom state is <i>isolated</i>. Only that atom's `set()` can update it's state. However, we can tell our atom we want it to listen for and update based on changes to source state by providing a `link()`:
 
 ```tsx
 import { create, useAtom } from 'delta-state'
