@@ -216,70 +216,7 @@ And like that we've create and consumed our first Delta store!
 
 Using a store to manage a single bit of state naturally seems a bit clunky and cumbersome. This is where Delta's other state management mechanism - atoms - comes in handy.
 
-Unlike full-blown stores, atoms are designed specifically to handle smaller, focused bits of state. Delta offers two ways to instantiate them - via `atom()` and via the `useAtom()` hook. Let's start with the former:
-
-```tsx
-// app.tsx
-
-import { atom } from 'delta-state'
-
-const useTrainerAtom = atom<string>((set) => [
-  'Ash',
-  (updatedName: string) => set(updatedName)
-]);
-
-const TrainerAboutPage = () => {
-    ...
-}
-```
-<br/>
-
-Like a store, we call the atom method, pass a type or interface specifying what the type of state we're providing is, pass a function specifying the initial state, and return a custom React hook to consume in a component. Unlike a store, we only need to pass the type of data specific to the atom then specify an initial value and an action to update the atom's state. 
-
-This condensed API is what makes atoms unique - like React's `useState()` all information relevant to the given piece of state are effectively specified inline. Unlike `useState()`, <i>we get to define how that state is updated right in the declaration</i>. This means no matter where an atom is consumed, the mechanism for manipulating its state remains as consistent as possible.
-
-Continuing below, we call our custom `useTrainerAtom()` hook inside our component, passing a selector like we did when we called our custom store hook:
-
-
-```tsx
-// app.tsx
-...
-
-const TrainerAboutPage = () => {
-
-  const [name, updatedName] = useTrainerAtom((state) => state);
-
-  return  (
-    <div className="flex flex-col items-center">
-      <div className="flex flex-col mt-2 mb-12 text-center">
-        <h1>Hello, my name is {name}</h1>
-      </div>
-      <form className="flex flex-col">
-          <div className="mt-2 mb-4 flex flex-col">
-            <label className="text-lg">Trainer Name</label>
-            <input 
-                className="border w-fit"
-                value={name} 
-                onChange={(e) => updateName(e.target.value)}
-            />
-          </div>
-        </form>  
-    </div>
-  );
-}
-```
-<br/>
-
-> <b>Why Selectors with Atoms?</b> 💡 
-> 
-> While atoms are designed to handle discrete pieces of state, sometimes these discrete pieces may take the form of arrays, objects, or other more complex data. By requiring use of selectors with atoms like we do with stores, we make dealing with complex data easier and achieve a more consistent API.
-
-<br/>
-
-Like `useState()`, our call to our atom hook returns a two-element array, with the first item being the state value and the second being the action to update that state.
-
-Finally let's examine the `useAtom()` hook:
-
+Unlike full-blown stores, atoms are designed specifically to handle smaller, focused bits of state. Delta offers two ways to instantiate them - via the `useAtom()` hook:
 
 ```tsx
 // app.tsx
@@ -287,15 +224,12 @@ import { useAtom } from 'delta-state'
 
 const TrainerAboutPage = () => {
 
-  const [name, updatedName] = useAtom(
-    'Ash',
-    (set) => (updatedName: string) => set(updatedName)
-  );
+  const trainerName = useAtom('Ash');
 
   return  (
     <div className="flex flex-col items-center">
       <div className="flex flex-col mt-2 mb-12 text-center">
-        <h1>Hello, my name is {name}</h1>
+        <h1>Hello, my name is {trainerName.get()}</h1>
       </div>
       <form className="flex flex-col">
           <div className="mt-2 mb-4 flex flex-col">
@@ -303,7 +237,7 @@ const TrainerAboutPage = () => {
             <input 
                 className="border w-fit"
                 value={name} 
-                onChange={(e) => updateName(e.target.value)}
+                onChange={(e) => trainerName.set(e.target.value)}
             />
           </div>
         </form>  
@@ -311,15 +245,79 @@ const TrainerAboutPage = () => {
   );
 }
 ```
-<br/>
 
-This achieves exactly what the above example does, but localizes the state to the given component.
+The `useAtom()` hook returns an atom object, which we can then call `get()` and `set()` on to access and update state.
 
-> <b>Atom vs useAtom?</b> 💡 
-> 
-> In general, we recommend using `atom()` when you need to share a discrete piece of state between multiple components and `useAtom()` when that state needs to be local to the component.
+This condensed API is what makes atoms unique - like React's `useState()` all information relevant to the given piece of state are effectively specified inline. Unlike `useState()`, the methods to manipulate and retrieve state are owned by the atom, so keeping track of where changes occur and state is being accessed is easier.
 
-<br/>
+We can do a lot more than just passing values to atoms - `get()`, `set()` and calls to `useAtom()` also accept functions with a helpful (optional) `get()` arg to extract values from other atoms:
+
+```tsx
+// app.tsx
+import { useAtom } from 'delta-state'
+
+const TrainerAboutPage = () => {
+
+  const lastName = useAtom('Pikachu');
+  const trainerName = useAtom((get) => `Ash ${get(lastName)}`);
+
+  return  (
+    <div className="flex flex-col items-center">
+      <div className="flex flex-col mt-2 mb-12 text-center">
+        <h1>Hello, my name is {trainerName.get((get) => `${get(trainerName)}!`)}</h1>
+      </div>
+      <form className="flex flex-col">
+          <div className="mt-2 mb-4 flex flex-col">
+            <label className="text-lg">Trainer Name</label>
+            <input 
+                className="border w-fit"
+                value={name} 
+                onChange={(e) => trainerName.set(() => e.target.value)}
+            />
+          </div>
+        </form>  
+    </div>
+  );
+}
+```
+
+This allows you to compose atoms while keeping individual atom state pure.
+
+Atoms also allow you to subscribe to state updates, via `subscribe()`:
+
+```tsx
+import { useAtom } from 'delta-state'
+
+export default function CounterApp() {
+
+  const atom = useAtom(0);
+  const atomTwo = useAtom('even');
+
+  // Our subscription will trigger every time a state update
+  // for our first atom occurs, which we can then use to set
+  // the state of our second atom.
+  atom.subscribe((count) => {
+    atomTwo.set((get) => count%2 ? 'odd' : 'even')
+  });
+
+  return (
+    <>
+      <main>
+        <div className="container flex flex-col justify-center items-center">
+          <button className="my-4 border w-fit p-4" onClick={() => atom.set((get) => get(atom) + 1)}>
+            Increment Local Counter
+          </button>
+          <h1 className="text-center">
+            {atom.get()}
+          </h1>
+        </div>
+      </main>
+    </>
+  );
+}
+```
+
+By default, subscriptions will trigger any time a given atom's state is updated.
 
 ----
 ### Recipes 🍲
@@ -358,13 +356,7 @@ const CounterApp = () => {
     add: state.add
   }));
 
-  const [
-    counter,
-    setCounter
-  ] = useAtom(
-    count,
-    (set) => (next: number) => set(next + 1)
-  );
+  const atom = useAtom(count);
 
   return (
     <>
@@ -372,15 +364,15 @@ const CounterApp = () => {
         <div className="container flex flex-col justify-center items-center">
           <button 
             className="my-4 border w-fit p-4" 
-            onClick={() => setCounter(counter)}
+            onClick={() => atom.set((get) => get(atom) + 1)}
           >
             Increment Local Counter
           </button>
-          <button className="my-4 border w-fit p-4" onClick={() => add(counter)}>
+          <button className="my-4 border w-fit p-4" onClick={() => add(count)}>
             Increment Global Counter
           </button>
           <h1 className="text-center">
-            {counter}
+            {atom.get()}
           </h1>
         </div>
       </main>
@@ -389,7 +381,6 @@ const CounterApp = () => {
 }
 
 ```
-<br/>
 
 Our app above uses a store and an atom created using the `useAtom()` hook to manage the same counter. Since our atom's state is created using the `useAtom()` hook from the state of the store's count value, we refer to the atom as a <i><b>derived atom</i></b>. We want both the "Increment Local" and "Increment Global" buttons to increase our counter. However when we press "Increase Global" nothing happens! What's the deal?!
 
@@ -420,14 +411,7 @@ const CounterApp = () => {
     add: state.add
   }));
 
-  const [
-    counter,
-    setCounter
-  ] = useAtom(
-    count,
-    (set) => (next: number) => set(next + 1),
-    (source, next) => next + 1
-  );
+  const atom = useAtom(count, (source, local) => local + 1);
 
   return (
     <>
@@ -435,15 +419,15 @@ const CounterApp = () => {
         <div className="container flex flex-col justify-center items-center">
           <button 
             className="my-4 border w-fit p-4" 
-            onClick={() => setCounter(counter)}
+            onClick={() => atom.set((get) => get(atom) + 1)}
           >
             Increment Local Counter
           </button>
-          <button className="my-4 border w-fit p-4" onClick={() => add(counter)}>
+          <button className="my-4 border w-fit p-4" onClick={() => add(count)}>
             Increment Global Counter
           </button>
           <h1 className="text-center">
-            {counter}
+            {atom.get()}
           </h1>
         </div>
       </main>
@@ -451,7 +435,6 @@ const CounterApp = () => {
   );
 }
 ```
-<br/>
 
 A `link()` is a function accepting two arguments - the first the source state and the second the atom's "local" state - and returns a value matching the type specified to the atom that the atom will use for its next state. Link functions allow you to reconcile the difference between the source and local state of a derived atom so that the behavior of your application remains consistent.
 <br/>
@@ -498,12 +481,12 @@ export default function CounterApp() {
 }
 ```
 
-Delta includes the `DerivedAtom<T>` type, which allows you to pass the useAtom hook as a store item. You can then alias and instantiate an instance of that atom wherever needed!
+Delta includes the `Atomic<T>` type, which allows you to pass the useAtom hook as a store item. You can then create an instance of that atom wherever needed!
 <br/>
 
 #### Comparators and Controlling State Updates
 
-In addition to selectors store and atom hooks you create via `atom()` can take an optional <i><b>comparator</b></i> function that will only allow for store or atom state to be updated if the comparator function returns `true`:
+Stores and the atom's `subscribe()` method take an optional `comparator()` function that allows you to filter state updates or subscription events:
 
 ```tsx
 import { create } from 'delta-state'
@@ -542,8 +525,13 @@ const CounterApp = () => {
   return (
     <>
       <main>
-        <div className="container flex flex-col justify-center items-center">
-          <button className="my-4 border w-fit p-4" onClick={() => add(0)}>
+        <div className="container flex flex-col justify-center items-center">   
+          <button className="my-4 border w-fit p-4" onClick={() => {
+            
+            // Our add() won't trigger state updates or re-renders
+            // because the comparator() will filter them out.
+            add(0)
+          }}>
             Increment Local Counter
           </button>
           <h1 className="text-center">
@@ -555,6 +543,43 @@ const CounterApp = () => {
   );
 }
 
+```
+
+For atoms, comparators can be used to filter subscription events:
+
+```tsx
+import { useAtom } from 'delta-state'
+
+export default function CounterApp() {
+
+  const atom = useAtom(0);
+
+  atom.subscribe(
+    (count) => {
+      console.log('Next odd number is: ', count);
+    }, 
+
+    // Our subscription will only trigger
+    // on odd numbers. We can also omit `prev`
+    // since we aren't using it.
+    ({ next }) => next%2 === 1
+  );
+
+  return (
+    <>
+      <main>
+        <div className="container flex flex-col justify-center items-center">
+          <button className="my-4 border w-fit p-4" onClick={() => atom.set((get) => get(atom) + 1)}>
+            Increment Local Counter
+          </button>
+          <h1 className="text-center">
+            {atom.get()}
+          </h1>
+        </div>
+      </main>
+    </>
+  );
+}
 ```
 
 Comparator functions accept a single object argument containing `next` and `prev` - with `next` being the requested state update and `prev` being the currnet store or atom state - and return a `boolean` (the value of the comparison performed in the function). We recommend using comparators to optimize your application's performance by controlling when state updates and React re-renders occur.
@@ -580,46 +605,70 @@ To access `get()`, just specify it as an argument in addition to `set()`!
 ----
 ### Async and Usage Without React 🤖
 
-If you need to use Delta in asynchronous code like React Server Components or Server Actions or independently of React, you can do so via `createAsync()`, `asyncAtom()`, `createBase()`, and `atomBase()`.
+Delta supports both sync and async use without react. Import from either `delta-state/async` or `delta-state/base` to access the async and base versions of atoms.
 
-Let's start with `createAsync()` - as before we'll create an interface to represent our store's state and actions:
+Rather than calling `useAtom()`, you'll instead call `atom()` to create an `async` or `base` atom:
 
 
 ```ts
 // async.ts
 
-import { createAsync } from "delta-state";
+import { atom } from "delta-state/base";
 
-interface CounterStore {
-  count: number;
-  updateCount: (next: number) => void;
-}
-
-const asyncCounter = async () => {
-  
+const runCounter = () => {
+  const counterAtom = atom(0)
+  counterAtom.set((get) => get(counterAtom) + 1)
 }
 
 
-asyncCounter()
+runCounter()
 ```
 
-Next we'll instantiate an async store instace via `createAsync()`:
-
+Async atoms require async functions for `atom()` and `set()`, which must be awaited:
 
 ```ts
 // async.ts
+
+import { atom } from "delta-state/async";
+
+const runCounter = async () => {
+  const counterAtom = await atom(async (get) =>  0)
+  await counterAtom.set(async (get) => get(counterAtom) + 1)
+}
+
+
+runCounter()
+```
+
+Creating async and base stores follows much the same pattern as their react counterpart, with the exception that you must pass an async function and await the Promise returned by `create()` for async stores:
+
+```ts
+import { create } from "delta-state/async";
+
+interface Store {
+  counter: number;
+  add: (amount: number) => void
+}
+
+// This isn't just a function but a Promise! We'll need to
+// await it.
+const createCounterStore = create<Store>(async (set) => ({
+  counter: 0,
+  add: (amount) => set({
+    counter: amount + 1
+  })
+}));
+
 
 ...
 
-const asyncCounter = async () => {
+const runAsyncCounter = async () => {
   
-  // The call to createAsync() returns a Promise so
+  // The call to create() returns a Promise so
   // we'll need to await it if we want to get the
   // function to use our store.
-  const asyncStore = await createAsync<CounterStore>(
-    
-    // We pass an async function to create our store
-    async (set, get) => ({
+  const asyncStore = await createCounterStore<CounterStore>(
+    (set, get) => ({
       count: 0,
       updateCount: (next: number) =>
         set({
@@ -629,21 +678,31 @@ const asyncCounter = async () => {
   );
 }
 
-asyncCounter()
+runAsyncCounter()
 ```
 
-There are a few important differences! First, when creating async stores, the function you pass <i>must</i> be async. Next, you <i>must</i> await the Promise returned by the call to `createAsync()`
-to access the function to use your store. To continue our example:
+For base stores:
 
 ```ts
-// async.ts
+import { create } from "delta-state/base";
+
+interface Store {
+  counter: number;
+  add: (amount: number) => void
+}
+const createCounterStore = create<Store>((set) => ({
+  counter: 0,
+  add: (amount) => set({
+    counter: amount + 1
+  })
+}));
+
 
 ...
 
-const asyncCounter = async () => {
-
-  const asyncStore = await createAsync<CounterStore>(
-    async (set, get) => ({
+const runCounter = () => {
+  const customStore = createCounterStore<CounterStore>(
+    (set, get) => ({
       count: 0,
       updateCount: (next: number) =>
         set({
@@ -651,25 +710,13 @@ const asyncCounter = async () => {
         })
     })
   );
-
-  const {
-    count, 
-    updateCount, 
-
-    // By default async stores return two additional
-    // helper functions, get and set, which
-    // function exactly like calling get() and set()
-    // inside an action.
-    get,
-    set
-  } = asyncStore((state) => state);
-
 }
 
-asyncCounter()
+runCounter()
 ```
-As with normal stores, we return both our value and action. However,
-unlike async stores, our value <b><i>does not automatically update when an action or</i></b> `set()` <b><i>is called</i></b>. In order
+
+As with React stores, we return both our value and action. However,
+unlike React stores, state for base and async store <b><i>does not automatically update when an action or</i></b> `set()` <b><i>is called</i></b>. In order
 to access the updated store value after calling an action you must call the `get()` method, which (like when calling `get()` inside an action) returns the entire store:
 
 ```ts
@@ -677,10 +724,10 @@ to access the updated store value after calling an action you must call the `get
 
 ...
 
-const asyncCounter = async () => {
+const runAsyncCounter = async () => {
 
   const asyncStore = await createAsync<CounterStore>(
-    async (set, get) => ({
+    (set, get) => ({
       count: 0,
       updateCount: (next: number) =>
         set({
@@ -705,7 +752,7 @@ const asyncCounter = async () => {
 
 }
 
-asyncCounter()
+runAsyncCounter()
 ```
 
 We can also update the store by calling `set()`, which works exactly as it does when you call it inside an action:
@@ -715,10 +762,10 @@ We can also update the store by calling `set()`, which works exactly as it does 
 
 ...
 
-const asyncCounter = async () => {
+const runAsyncCounter = async () => {
 
   const asyncStore = await createAsync<CounterStore>(
-    async (set, get) => ({
+    (set, get) => ({
       count: 0,
       updateCount: (next: number) =>
         set({
@@ -738,19 +785,19 @@ const asyncCounter = async () => {
 
 }
 
-asyncCounter()
+runAsyncCounter()
 ```
-If you need to access store state changes reactively (i.e. whenever an action or `set()` mutates store state), you can call `subscribe()`, which takes a callback and optional comparator function:
+If you need to access store state changes reactively (i.e. whenever an action or `set()` mutates store state), you can call `subscribe()` on both async and base stores. Like `subscribe()` for atoms, the function takes a callback and optional comparator function:
 
 ```ts
 // async.ts
 
 ...
 
-const asyncCounter = async () => {
+const runAsyncCounter = async () => {
 
   const asyncStore = await createAsync<CounterStore>(
-    async (set, get) => ({
+    (set, get) => ({
       count: 0,
       updateCount: (next: number) =>
         set({
@@ -787,92 +834,9 @@ const asyncCounter = async () => {
 
 }
 
-asyncCounter()
+runAsyncCounter()
 
 ```
-
-We can likewise instantiate async atoms via `atomAsync()`:
-
-```ts
-// async.ts
-
-...
-
-const asyncCounter = async () => {
-
-  ...
-
-  const counterAtom = await atomAsync<number>(async (set, get) => [
-    0,
-    (next) => set(next + get()),
-  ]);
-
-  const [
-    value, 
-    add, 
-    get, 
-    set,
-    subscribe
-  ] = counterAtom((value) => value);
-
-}
-
-asyncAtomCounter()
-
-```
-
-As with async stores, async atoms include `get()`, `set()`, and `subscribe()`, allowing you to manage the atom's state as needed.
-
-If synchronous usage independent of React is required, `createBase()` and `atomBase()` allow you you to instantiate stores and atoms:
-
-```ts
-// sync.ts
-import { createBase } from 'delta-state';
-
-...
-
-const syncCounterStore = () => {
-
-  const syncCounter = createBase<CounterStore>((set, get) => ({
-      count: 0,
-      updateCount: (next: number) =>
-        set({
-          count: next + get().count,
-        })
-    })
-  );
-
-  const {
-    count, 
-    updateCount, 
-    get,
-    set,
-    subscribe
-  } = syncCounter((state) => state);
-
-}
-
-const syncCounterAtom = () => {
-  const counterAtom = atomAsync<number>((set, get) => [
-    0,
-    (next) => set(next + get()),
-  ]);
-
-  const [
-    value, 
-    add, 
-    get, 
-    set,
-    subscribe
-  ] = counterAtom((value) => value);
-}
-
-syncCounterStore()
-syncCounterAtom()
-
-```
-
-The APIs for sync base stores and atoms follow those of their asynchronous counterparts minus the need for async functions and awaiting the store or atom in order to use it.
 
 ----
 ### Credits and Thanks 🙏
