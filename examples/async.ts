@@ -1,32 +1,24 @@
-import { createAsync } from "../src";
-
-interface CounterStore {
-  count: number;
-  updateCount: (next: number) => void;
-  getCount: () => number;
-}
+import { atom } from "../src/async";
 
 const test = async () => {
-  const asyncStore = await createAsync<CounterStore>(async (set, get) => ({
-    count: 0,
-    updateCount: (next: number) =>
-      set({
-        count: next + get().count,
-      }),
-    getCount: () => get().count,
-  }));
 
+  const atomTwo = await atom(0)
+  const atomThree = await atom(0)
 
-  const { get, set, subscribe } = asyncStore((state) => state);
+  
+  atomThree.subscribe((count) => {
+    atomTwo.set(count + atomTwo.get())
+    console.log(count)
+  })
 
-  subscribe(
-    ({ count }) => {
-      console.log(count);
-    }, 
-    ({ next, prev }) => next.count > prev.count + 10
-  );
+  atomThree.set(1)
+  atomThree.set(1)
+  atomThree.set(1)
 
-  set({ count: get().count + 100 });
+  console.log(atomThree.get())
+
+  console.log(atomTwo.get())
+
 
 };
 
