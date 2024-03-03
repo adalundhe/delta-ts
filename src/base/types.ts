@@ -15,20 +15,21 @@ export type AtomStore<T> = {
   update: (next: T) => void;
   subscribers: Set<Listener<T>>;
   subscribe: (callback: Listener<T>) => () => boolean;
-  getState: () => T;
+  getState: (atom?: Atom<T>) => T;
   getInitState: () => T;
   setState: (state: T) => void;
   delete: (callback: Listener<T>) => void;
 };
 
 export type Atom<T> = {
-  store: AtomStore<T>;
-  get: (transform?: Read<T>) => T;
+  value: T;
+  subscribers: Set<Listener<T>>;
+  get: (next?: Read<T>) => T;
   set: (next: T | Read<T>) => void;
   subscribe: (
     callback: Listener<T>,
     comparator?: ({ next, prev }: { next: T; prev: T }) => boolean,
-  ) => void;
+  ) => () => void;
 };
 
 export type Atomic<T> = (

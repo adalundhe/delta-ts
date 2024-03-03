@@ -1,75 +1,102 @@
-import { useCallback, useMemo, useRef, useState, Dispatch, SetStateAction } from "react";
-import { createAtomApi, getValueFromCreator } from "~/base/atom.ts";
-import { Atom, Listener, Read } from "~/base/types.ts";
+import {
+  ReducerWithoutAction,
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+} from "react";
+import { isPromiseLike, use } from "~/base/atom.ts";
+import { Atom } from "~/base/types.ts";
+import { useStore } from "./context.ts";
 
+const useGetAtomStore = <T>(atom: Atom<T>) => {
+  const store = useStore<T>();
 
-
-const createAtom = <T>(creator: T | Read<T>, setter?: Dispatch<SetStateAction<T>>) => {
-  const createNextAtom = createAtomApi();
-  const atomStore = createNextAtom<T>({} as any);
-
-  const init = getValueFromCreator(creator);
-  atomStore.setState(init);
-
-  return {
-    store: atomStore,
-    get: (transform?: Read<T>) => transform ? getValueFromCreator(transform) : atomStore.getState(),
-    set: (next: T | Read<T>) => {
-
-      const value = getValueFromCreator(next)
-      atomStore.setState(value);
-      setter && setter(value)
-      atomStore.subscribers.forEach((callback: Listener<T>) => {
-        callback(value);
-      });
-    },
-    subscribe: (
-      callback: (next: T) => void,
-      callbackComparator?: ({ next, prev }: { next: T; prev: T }) => boolean,
-    ) => {
-      if (callbackComparator) {
-        const currentState = atomStore.getState();
-
-        atomStore.subscribers.add(
-          (state) =>
-            callbackComparator({
-              next: state as T,
-              prev: currentState as any,
-            }) && callback(state as T),
-        );
-      } else {
-        atomStore.subscribers.add(callback as (state: any) => void);
+  const [[value, _], rerender] = useReducer<
+    ReducerWithoutAction<readonly [T, Atom<T>]>,
+    undefined
+  >(
+    (prev) => {
+      const nextValue = atom.get();
+      if (Object.is(prev[0], nextValue) && prev[1] === atom) {
+        return prev;
       }
+      return [nextValue, atom];
     },
-  } as Atom<T>;
+    undefined,
+    () => [store.get(), atom],
+  );
+
+  useEffect(() => {
+    const unsub = atom.subscribe(() => {
+      rerender();
+    });
+    return unsub;
+  }, [atom]);
+
+  return isPromiseLike(value) ? use(value) : (value as Awaited<T>);
 };
 
-export const useAtom = <T>(
-  creator: T | Read<T>,
-  link?: (source: T, local: T) => T,
-) => {
+const useSetAtomStore = <T>(atom: Atom<T>) => {
+  const setAtom = useCallback(
+    (next: T) => {
+      next !== atom.get() && atom.set(next);
+    },
+    [atom],
+  );
+  return setAtom;
+};
 
-  const creatorValue = useMemo(() => getValueFromCreator(creator), [creator]);
-  const lastLinkedState = useRef(creatorValue);
-  const linkFn = link ? useCallback((source: T, local: T) => link(source, local), [link]) : undefined
-  
-  const [_, setState] = useState(creatorValue);
+export const useAtomStore = <T>(atom: Atom<T>) => {
+  return [useGetAtomStore(atom), useSetAtomStore(atom)] as [
+    T,
+    (value: T) => void,
+  ];
+};
 
-  const atomRef = useRef(createAtom<T>(
-    creator, 
-    setState
-  )).current;
+export const useProxy = <V>(atom: Atom<V>) => {
+  type ValueType = V extends PromiseLike<any> ? Awaited<V> : V;
+  type ProxyType = {
+    value: ValueType;
+  };
 
+  useAtomStore(atom);
 
-  useMemo(() => {
-    if (lastLinkedState.current !== creatorValue && linkFn) {
+  return useRef(
+    new Proxy(
+      {
+        value: atom.get(),
+      } as ProxyType extends {
+        value: ValueType;
+      }
+        ? ProxyType
+        : any,
+      {
+        get() {
+          return atom.get();
+        },
+        set(
+          target: ProxyType,
+          props: string,
+          value: ProxyType[keyof ProxyType],
+          _: any,
+        ) {
+          if (atom.get() !== value) {
+            target[props as keyof ProxyType] = value;
+            atom.set(value);
+          }
+          return true;
+        },
+      },
+    ),
+  ).current as {
+    value: ValueType;
+  };
+};
 
-      atomRef.store.value = linkFn(creatorValue, atomRef.store.value);
+export const useAtom = <T>(atom: Atom<T>) => {
+  useAtomStore(atom);
+  const atomRef = useRef(atom).current;
 
-      lastLinkedState.current = creatorValue;
-
-    }
-  }, [creatorValue, lastLinkedState, atomRef, linkFn]);
-
-  return atomRef;
+  return atomRef as T extends PromiseLike<any> ? Atom<Awaited<T>> : Atom<T>;
 };

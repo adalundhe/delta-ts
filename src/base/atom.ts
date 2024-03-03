@@ -1,82 +1,103 @@
-import { Atom, AtomStore, Listener, Read } from "./types.ts";
+import { Atom, Listener, Read } from "./types.ts";
 
-export const getValueFromCreator = <T>(creator: T | Read<T>) => {
-  const getState = (atom: Atom<T>): T => atom.get();
-  const syncCreator = creator as (get: (atom: Atom<T>) => T) => T;
+export const isPromiseLike = (x: unknown): x is PromiseLike<unknown> =>
+  typeof (x as any)?.then === "function";
 
-  return typeof creator === "function" ? syncCreator(getState) : creator;
+export const use = <T>(
+  promise: PromiseLike<T> & {
+    status?: "pending" | "fulfilled" | "rejected";
+    value?: T;
+    reason?: unknown;
+  },
+): T => {
+  if (promise.status === "pending") {
+    throw promise;
+  } else if (promise.status === "fulfilled") {
+    return promise.value as T;
+  } else if (promise.status === "rejected") {
+    throw promise.reason;
+  } else {
+    promise.status = "pending";
+    promise.then(
+      (v) => {
+        promise.status = "fulfilled";
+        promise.value = v;
+      },
+      (e) => {
+        promise.status = "rejected";
+        promise.reason = e;
+      },
+    );
+    throw promise;
+  }
 };
 
-export const createAtom = <T>(atom: T): AtomStore<T> =>
-  ({
-    value: atom,
-    subscribers: new Set<Listener<T>>(),
-    subscribe(callback: Listener<T>) {
-      this.subscribers.add(callback);
-      return () => this.subscribers.delete(callback);
-    },
-    getState() {
-      return this.value;
-    },
-    getInitState() {
-      return atom;
-    },
-    setState(next: T) {
-      this.value = next;
-    },
-  }) as AtomStore<T>;
+const isGetter = <T>(x: unknown): x is Read<T> => typeof x === "function";
 
-export const createAtomApi = () => createAtom;
+export const getValue = <T>(getState: T | Read<T>): T => {
+  if (isPromiseLike(getState)) {
+    return use(getState) as Awaited<T>;
+  } else if (isGetter<T>(getState)) {
+    return getState(<V>(atom: Atom<V>): V => atom.get());
+  } else {
+    return getState;
+  }
+};
 
-const createBaseAtom = <T>(
-  creator: T | Read<T>,
+export const createBaseAtom = <T>(
+  get: T | Read<T>,
   comparator?: ({ next, prev }: { next: T; prev: T }) => boolean,
+  setter?: (value: T) => void,
 ) => {
-  const createNextAtom = createAtomApi();
-  const atomStore = createNextAtom<T>({} as any);
-
-  const getState = (atom: Atom<T>): T => atom.get();
-
-  const syncCreator = creator as (get: (atom: Atom<T>) => T) => T;
-
-  const init = typeof creator === "function" ? syncCreator(getState) : creator;
-  atomStore.setState(init);
-
   const atom = {
-    store: atomStore,
-    get: () => atomStore.getState(),
-    set: (next: T | Read<T>) => {
-      const value = getValueFromCreator(next);
+    value: get,
+    subscribers: new Set<Listener<T>>(),
+    get(next?: T | Read<T>) {
+      return next ? getValue(next) : getValue(this.value);
+    },
+    set(next: T | Read<T>) {
+      const value = getValue(next) as unknown as Awaited<T>;
       const shouldUpdate =
         !comparator ||
         comparator({
           next: value,
-          prev: atomStore.getState(),
+          prev: getValue(this.value),
         });
 
       if (shouldUpdate) {
-        atomStore.setState(value);
-        atomStore.subscribers.forEach((callback) => {
+        this.value = value;
+
+        setter && setter(this.value);
+        this.subscribers.forEach((callback) => {
           callback(value);
         });
       }
     },
-    subscribe: (
+    subscribe(
       callback: (next: T) => void,
       callbackComparator?: ({ next, prev }: { next: T; prev: T }) => boolean,
-    ) => {
+    ) {
       if (callbackComparator) {
-        const currentState = atomStore.getState();
-
-        atomStore.subscribers.add(
+        const subscribers = this.subscribers.add(
           (state) =>
             callbackComparator({
               next: state as T,
-              prev: currentState as any,
+              prev: getValue(this.value),
             }) && callback(state as T),
         );
+
+        return () =>
+          subscribers.forEach((callback) => {
+            callback({});
+          });
       } else {
-        atomStore.subscribers.add(callback as (state: any) => void);
+        const subscribers = this.subscribers.add(
+          callback as (state: any) => void,
+        );
+        return () =>
+          subscribers.forEach((callback) => {
+            callback({});
+          });
       }
     },
   } as Atom<T>;
