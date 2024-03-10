@@ -2,7 +2,7 @@
 ![npm version](https://img.shields.io/npm/v/delta-state?color=28920
 )
 ![downloads](https://img.shields.io/npm/dt/delta-state?color=961866)
-![bundle size](https://img.shields.io/bundlephobia/minzip/delta-state)
+![bundle size](https://deno.bundlejs.com/badge?q=delta-state)
 ![unpacked size](https://img.shields.io/npm/unpacked-size/delta-state?label=unpacked%20size&color=843382)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 
