@@ -1,178 +1,110 @@
-import { Listener, Store } from "./types.ts";
+import { Listener, Read, StateStore } from "./types.ts";
 
-export const createStoreApi = () => {
-  const implementStore = <T>(state: T) => ({
-    state,
+export const isPromiseLike = (x: unknown): x is PromiseLike<unknown> =>
+  typeof (x as any)?.then === "function";
+
+export const use = <T>(
+  promise: PromiseLike<T> & {
+    status?: "pending" | "fulfilled" | "rejected";
+    value?: T;
+    reason?: unknown;
+  },
+): T => {
+  if (promise.status === "pending") {
+    throw promise;
+  } else if (promise.status === "fulfilled") {
+    return promise.value as T;
+  } else if (promise.status === "rejected") {
+    throw promise.reason;
+  } else {
+    promise.status = "pending";
+    promise.then(
+      (v) => {
+        promise.status = "fulfilled";
+        promise.value = v;
+      },
+      (e) => {
+        promise.status = "rejected";
+        promise.reason = e;
+      },
+    );
+    throw promise;
+  }
+};
+
+const isGetter = <T>(x: unknown): x is Read<T> => typeof x === "function";
+
+export const getValue = <T>(getState: T | Read<T>): T => {
+  if (isPromiseLike(getState)) {
+    return use(getState) as Awaited<T>;
+  } else if (isGetter<T>(getState)) {
+    return getState(<V>(store: StateStore<V>): V => store.get());
+  } else {
+    return getState;
+  }
+};
+
+export const createBaseStore = <T>(
+  get: T | Read<T>,
+  comparator?: ({ next, prev }: { next: T; prev: T }) => boolean,
+  setter?: (value: T) => void,
+) => {
+  const store = {
+    value: get,
+    comparator: comparator,
+    setter: setter,
     subscribers: new Set<Listener<T>>(),
-    subscribe(callback: Listener<T>) {
-      this.subscribers.add(callback);
-      return () => this.subscribers.delete(callback);
+    get(next?: T | Read<T>) {
+      return next ? getValue(next) : getValue(this.value);
     },
-    getState() {
-      return this.state;
-    },
-    getInitState() {
-      return state;
-    },
-    setState({
-      next,
-      replace = false,
-    }: {
-      next: Partial<T>;
-      replace?: boolean;
-    }) {
-      const nextState =
-        typeof next === "function"
-          ? (next as (next: T) => T)(next)
-          : (next as T);
+    set(next: T | Read<T>) {
+      const value = getValue(next) as unknown as Awaited<T>;
+      const shouldUpdate =
+        !this.comparator ||
+        this.comparator({
+          next: value,
+          prev: getValue(this.value),
+        });
 
-      if (!Object.is(nextState, this.state)) {
-        this.state =
-          replace ?? (typeof nextState !== "object" || nextState === null)
-            ? nextState
-            : Object.assign({}, this.state, nextState);
+      if (shouldUpdate) {
+        this.value = value;
+
+        setter && setter(this.value);
+        this.subscribers.forEach((callback) => {
+          callback(value);
+        });
       }
     },
-    delete(callback: Listener<T>) {
-      this.subscribers.delete(callback);
-    },
-  });
+    subscribe(
+      callback: (next: T) => void,
+      callbackComparator?: ({ next, prev }: { next: T; prev: T }) => boolean,
+    ) {
+      if (callbackComparator) {
+        const subscribers = this.subscribers.add(
+          (state) =>
+            callbackComparator({
+              next: state as T,
+              prev: getValue(this.value),
+            }) && callback(state as T),
+        );
 
-  return implementStore;
-};
-
-const useBaseExternalStoreWithSelector = <Snapshot, Selection>(
-  store: Store<Snapshot>,
-  selector: (snapshot: Snapshot) => Selection,
-  comparator?: (a: Selection, b: Selection) => boolean,
-) => {
-  const callback = (next: Snapshot) => {
-    const requestedUpdate = {
-      ...store.getState(),
-      ...(next ? next : {}),
-    };
-    const currentState = selector(store.getState());
-    const nextState = selector(requestedUpdate);
-    const shouldUpdate = comparator
-      ? comparator(currentState, nextState)
-      : true;
-
-    shouldUpdate &&
-      store.setState({
-        next: requestedUpdate,
-      });
-  };
-
-  store.subscribe(callback as any);
-  return selector(store.getState());
-};
-
-export const createInternalBaseReference = <T>(store: Store<T>) => {
-  const useCreatedStore = <U>(
-    selector: (state: T) => U,
-    comparator?: ({ next, prev }: { next: U; prev: U }) => boolean,
-  ) => {
-    const selection = useBaseExternalStoreWithSelector(
-      store,
-      selector,
-      comparator
-        ? (a: U, b: U) =>
-            comparator({
-              next: a,
-              prev: b,
-            })
-        : undefined,
-    );
-
-    const callback = (next: Partial<T>) => {
-      const requestedUpdate = {
-        ...store.getState(),
-        ...(next ? next : {}),
-      };
-      const currentState = selector(store.getState());
-      const nextState = selector(requestedUpdate);
-      const shouldUpdate = comparator
-        ? comparator({
-            next: currentState,
-            prev: nextState,
-          })
-        : true;
-
-      shouldUpdate &&
-        store.setState({
-          next: requestedUpdate,
-        });
-    };
-
-    const callbackWithComparator = (
-      callbackComparator: ({ next, prev }: { next: U; prev: U }) => boolean,
-      subscriptionCallback: (next: U) => void,
-    ) => {
-      const currentState = store.getState();
-
-      store.subscribers.add(
-        (state) =>
-          callbackComparator({
-            next: state as U,
-            prev: currentState as any,
-          }) && subscriptionCallback(state as U),
-      );
-    };
-
-    return {
-      ...selection,
-      get() {
-        store.subscribe(callback);
-        return selector(store.getState());
-      },
-      set(state: Partial<U>) {
-        store.subscribers.forEach((callback: Listener<T>) => {
-          callback({
-            ...store.getState(),
-            ...state,
+        return () =>
+          subscribers.forEach((callback) => {
+            callback({});
           });
-        });
-      },
-      subscribe(
-        callback: (next: U) => void,
-        callbackComparator?: ({ next, prev }: { next: U; prev: U }) => boolean,
-      ) {
-        callbackComparator
-          ? callbackWithComparator(callbackComparator, callback)
-          : store.subscribers.add(callback as (state: any) => void);
-      },
-    };
-  };
+      } else {
+        const subscribers = this.subscribers.add(
+          callback as (state: any) => void,
+        );
+        return () =>
+          subscribers.forEach((callback) => {
+            callback({});
+          });
+      }
+    },
+  } as StateStore<T>;
 
-  Object.assign(useCreatedStore, store);
-
-  return useCreatedStore;
+  return store;
 };
 
-const createBaseStoreFromState = () => {
-  const useCreatedStore = <U>(
-    creator: (set: (next: Partial<U>) => void, get: () => U) => U,
-  ) => {
-    const createNextStore = createStoreApi();
-    const store = createNextStore<U>({} as any);
-
-    const setState = (next: Partial<U>): void => {
-      store.subscribers.forEach((callback) => {
-        callback(next);
-      });
-    };
-
-    const getState = (): U => store.getState();
-
-    const init = creator(setState, getState);
-    store.setState({
-      next: init,
-    });
-
-    return createInternalBaseReference<U>(store);
-  };
-
-  return useCreatedStore;
-};
-
-export const create = createBaseStoreFromState();
+export const create = createBaseStore;

@@ -1,96 +1,74 @@
-import useSyncExports from "use-sync-external-store/shim/with-selector.js";
-import { Listener, Store } from "~/base/types.ts";
+import { useMemo, useReducer, useRef } from "react";
+import { createBaseStore, isPromiseLike, use } from "~/base/store.ts";
+import { ReadWrite, StateStore } from "~/base/types.ts";
 
-const { useSyncExternalStoreWithSelector } = useSyncExports;
+const createStore = <T, U>(
+  store: StateStore<T>,
+  init: T | ReadWrite<T>,
+  selector: (state: Awaited<T>) => U,
+  comparator?: ({ next, prev }: { next: U; prev: U }) => boolean,
+) => {
+  store.comparator = comparator as typeof store.comparator;
+  store.value = selector(
+    (isPromiseLike(init) ? use(init) : init) as Awaited<T>,
+  ) as unknown as T;
 
-export const createStoreApi = () => {
-  const implementStore = <T>(state: T) => ({
-    state,
-    subscribers: new Set<Listener<T>>(),
-    subscribe(callback: Listener<T>) {
-      this.subscribers.add(callback);
-      return () => this.subscribers.delete(callback);
-    },
-    getState() {
-      return this.state;
-    },
-    getInitState() {
-      return state;
-    },
-    setState({
-      next,
-      replace = false,
-    }: {
-      next: Partial<T>;
-      replace?: boolean;
-    }) {
-      const nextState =
-        typeof next === "function"
-          ? (next as (next: T) => T)(next)
-          : (next as T);
-
-      if (!Object.is(nextState, this.state)) {
-        this.state =
-          replace ?? (typeof nextState !== "object" || nextState === null)
-            ? nextState
-            : Object.assign({}, this.state, nextState);
-      }
-    },
-    delete(callback: Listener<T>) {
-      this.subscribers.delete(callback);
-    },
-  });
-
-  return implementStore;
+  return store as unknown as StateStore<U>;
 };
 
-const createInternalReference = <T>(store: Store<T>, init: T) => {
+const createInternalAtomReference = <T>(
+  atom: StateStore<T>,
+  init: T | ReadWrite<T>,
+) => {
   const useCreatedStore = <U>(
-    selector: (state: T) => U,
+    selector: (state: Awaited<T>) => U,
     comparator?: ({ next, prev }: { next: U; prev: U }) => boolean,
   ) => {
-    return useSyncExternalStoreWithSelector(
-      (callback: Listener<T>) => store.subscribe(callback),
-      () => store.getState(),
-      () => init,
-      selector,
-      comparator
-        ? (a: U, b: U) =>
-            comparator({
-              next: a,
-              prev: b,
-            })
-        : undefined,
-    );
-  };
+    const atomRef = useRef(
+      createStore(atom, init, selector, comparator),
+    ).current;
 
-  Object.assign(useCreatedStore, store);
+    const prev = useRef(atomRef.value);
+
+    const [value, rerender] = useReducer((_: U, next: U) => {
+      atomRef.value = next;
+      return next;
+    }, atomRef.value);
+
+    useMemo(() => {
+      atomRef.subscribe((next) => {
+        if (!Object.is(prev.current, next)) {
+          prev.current = next as U;
+          rerender(next as U);
+        }
+      });
+    }, [atomRef]);
+
+    return value as unknown as U;
+  };
 
   return useCreatedStore;
 };
 
 const createStoreFromState = () => {
-  const useCreatedStore = <U>(
-    creator: (set: (next: Partial<U>) => void, get: () => U) => U,
-  ) => {
-    const createNextStore = createStoreApi();
-    const store = createNextStore<U>({} as any);
+  const useCreatedStore = <U>(creator: ReadWrite<U>) => {
+    const store = createBaseStore({} as any);
 
     const setState = (next: Partial<U>): void => {
-      store.setState({
-        next,
-      });
-      store.subscribers.forEach((callback) => callback({}));
+      store.set({
+        ...store.get(),
+        ...next,
+      } as U);
     };
 
-    const getState = (): U => store.getState();
+    const getState = (
+      selected?: StateStore<U>,
+    ): U extends PromiseLike<any> ? Awaited<U> : U =>
+      selected ? selected.get() : store.get();
 
-    const init = creator(setState, getState);
-    store.setState({
-      next: init,
-    });
+    const init = creator(setState, getState as any);
 
-    return createInternalReference<U>(store, init);
+    return createInternalAtomReference<U>(store, init);
   };
 
   return useCreatedStore;

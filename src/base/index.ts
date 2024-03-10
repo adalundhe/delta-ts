@@ -1,2 +1,1 @@
-export { atom } from "./atom";
-export { create } from "./store";
+export { create } from "./store.ts";

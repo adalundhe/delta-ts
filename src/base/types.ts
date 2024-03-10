@@ -1,29 +1,10 @@
 export type Listener<T> = (next: Partial<T>) => void;
 
-export type Store<S> = {
-  state: S;
-  subscribers: Set<Listener<S>>;
-  subscribe: (callback: Listener<S>) => () => boolean;
-  getState: () => S;
-  getInitState: () => S;
-  setState: ({ next, replace }: { next: S; replace?: boolean }) => void;
-  delete: (callback: Listener<S>) => void;
-};
-
-export type AtomStore<T> = {
-  value: T;
-  update: (next: T) => void;
-  subscribers: Set<Listener<T>>;
-  subscribe: (callback: Listener<T>) => () => boolean;
-  getState: (atom?: Atom<T>) => T;
-  getInitState: () => T;
-  setState: (state: T) => void;
-  delete: (callback: Listener<T>) => void;
-};
-
-export type Atom<T> = {
+export type StateStore<T> = {
   value: T;
   subscribers: Set<Listener<T>>;
+  comparator?: ({ next, prev }: { next: T; prev: T }) => boolean;
+  setter?: (value: T) => void;
   get: (next?: Read<T>) => T;
   set: (next: T | Read<T>) => void;
   subscribe: (
@@ -32,10 +13,18 @@ export type Atom<T> = {
   ) => () => void;
 };
 
-export type Atomic<T> = (
-  creator: T | Read<T>,
+export type Store<T> = (
+  creator: T | Read<T> | ReadWrite<T>,
   link?: ((source: T, local: T) => T) | undefined,
-) => Atom<T>;
+) => StateStore<T>;
 
-export type Getter = <Value>(atom: Atom<Value>) => Value;
+export type Getter = <Value>(store: StateStore<Value>) => Value;
 export type Read<Value> = (get: Getter) => Value;
+
+export type StoreGetter<Value> = (
+  store?: StateStore<Value extends PromiseLike<any> ? Awaited<Value> : Value>,
+) => Value extends PromiseLike<any> ? Awaited<Value> : Value;
+export type StoreSetter<Value> = (
+  next: Partial<Value extends PromiseLike<any> ? Awaited<Value> : Value>,
+) => void;
+export type ReadWrite<V> = (set: StoreSetter<V>, get: StoreGetter<V>) => V;
