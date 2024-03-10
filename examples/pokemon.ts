@@ -1,5 +1,4 @@
 import { create } from "../src";
-import { useState } from "react";
 
 interface PokemonTrainer {
   trainerName: string;
