@@ -212,12 +212,353 @@ And like that we've create and consumed our first Delta store!
 <br/>
 
 ----
+
+### Derivations 🧬
+
+One of the major challenges with centralized state stores is that they can quickly become unweildy. Let's examine the state store that manages the form component below:
+
+```tsx
+type ComplexUserForm = {
+    firstName: string;
+    lastName: string;
+    setFirstName: (name: string) => void;
+    setLastName: (name: string) => void
+    setForm: (formData: Partial<ComplexUserForm>) => void
+}
+
+const useComplexform = create<ComplexUserForm>((set) => ({
+    firstName: "",
+    lastName: "",
+    setFirstName(name){
+        set({
+            firstName: name
+        })
+    },
+    setLastName(name){
+        set({
+            lastName: name
+        })
+    },
+    setForm(formData){
+        set(formData)
+    }
+}))
+
+const UserForm = () => {
+
+    const {
+        firstName,
+        lastName,
+        setFirstName,
+        setLastName,
+        setForm
+    } = useComplexForm((state) => state)
+
+    return (
+        <div className='flex flex-col items-center my-2'>
+            <form onSubmit={(e) => {
+                e.preventDefault();
+                setForm({
+                    firstName,
+                    lastName
+                });
+            }}
+            className='flex flex-col w-1/2 items-center'
+            >
+                <div className='flex flex-col items-center my-2'>
+                    <label className='text-center'>First Name</label>
+                    <input 
+                        className='border my-2'
+                        value={firstName} 
+                        onChange={(e) => setFirstName(e.target.value)}
+                    />
+                </div>
+                <div className='flex flex-col items-center my-2'>
+                    <label className='text-center'>Last Name</label>
+                    <input 
+                        className='border my-2'
+                        value={lastName} 
+                        onChange={(e) => setLastName(e.target.value)}
+                    />
+                </div>
+                <button type='submit'>
+                    Submit
+                </button>
+            </form>
+            <div className='flex flex-col w-1/2 items-center my-2'>
+                <h1>My name is: {firstName} {lastName}</h1>
+
+            </div>
+        </div>
+    )
+}
+```
+
+We want to retain independent actions for updating our fields and submitting our form (since submitting said form might also entail HTTP requests, etc.), however as this form grows the number of state items and actions managed by the store will quickly grow. Likewise, we don't really even need to update our store state until we submit!
+
+Delta allows you to accomplish this goal of deriving localized component state from store state via the `useDerived()` hook. Let's look at an example:
+
+```tsx
+// This is much easier to manage! Now we can add fields as 
+// needed and delegate handling updates of those fields to
+// their respective form component.
+type ComplexUserForm = {
+    firstName: string;
+    lastName: string;
+    setForm: (formData: Partial<ComplexUserForm>) => void
+}
+
+const useComplexForm = create<ComplexUserForm>((set) => ({
+    firstName: "",
+    lastName: "",
+    setForm(formData){
+        set(formData)
+    }
+}))
+
+const UserForm = () => {
+
+    const {
+        firstName,
+        lastName,
+        setForm
+    } = useComplexForm((state) => state)
+
+    // useDerived() takes any valid "state slice" (any item(s) 
+    // of a store's state) and returns the current value and a 
+    // "setter" action like with React's useState() hook.
+    const [userFirstName, setFirstName] = useDerived(firstName)
+    const [userLastName, setLastName] = useDerived(lastName)
+
+    return (
+        <div className='flex flex-col items-center my-2'>
+            <form onSubmit={(e) => {
+                e.preventDefault();
+                setForm({
+                    firstName: userFirstName,
+                    lastName: userLastName
+                });
+            }}
+            className='flex flex-col w-1/2 items-center'
+            >
+                <div className='flex flex-col items-center my-2'>
+                    <label className='text-center'>First Name</label>
+                    <input 
+                        className='border my-2'
+                        value={userFirstName} 
+                        onChange={(e) => setFirstName(e.target.value)}
+                    />
+                </div>
+                <div className='flex flex-col items-center my-2'>
+                    <label className='text-center'>Last Name</label>
+                    <input 
+                        className='border my-2'
+                        value={userLastName} 
+                        onChange={(e) => setLastName(e.target.value)}
+                    />
+                </div>
+                <button type='submit'>
+                    Submit
+                </button>
+            </form>
+            <div className='flex flex-col w-1/2 items-center my-2'>
+                <h1>My name is: {firstName} {lastName}</h1>
+
+            </div>
+        </div>
+    )
+}
+```
+
+We've refactored our store to only contain the form fields required
+as well as the `setForm()` action we call we submitting our form. 
+We then pass each of our `firstName` and `lastName` fields (which we refer to as "state slice(s)") to a `useDerived()` hook, returning the localized state and setter action.
+
+This functions exactly as our previous example with a few key differences:
+
+- Updates to the state store are not reflected in derivations unless those derivations are <b><i>linked</i></b> (we'll cover this down below in the <i>Recipes</i> section).
+
+- Updates to derivations do not update store state. Per React Flow principles, state flow is unidirectional, meaning derivations can only derive from and/or respond to changes in upstream source.
+
+Using derivations lets us keep store state concice focused, delegating the majority of component-specific state handling to that component. This makes it easy to use our form store to manage multiple different types of form components - ensuring they use the same basic set of fields and submit data the same way, but allowing each form to handle field input according to its own needs.
+
+----
+
 ### Recipes 🍲
 
 Let's cover some tricks and techniques for Delta!
 <br/>
 
-#### Comparators and Controlling State Updates
+#### Linking 🔗
+
+One of the important features of Delta's derivations is that like Jotai's atoms, they can be derived from any piece of state - including stores, React state, or even other derivations. Let's look at the counter app below:
+
+```tsx
+
+type Counter = {
+    count: number,
+    increment: () => void
+};
+
+const useCounter = create<Counter>((set, get) => ({
+    count: 0,
+    increment: () => {
+        set({count: get().count + 1})
+    }
+}));
+
+const Counter = () => {
+  
+  const {
+    count,
+    add
+  } = useCounter((state) => ({
+    count: state.count,
+    add: state.increment
+  }));
+
+  const [counter, setCounter] = useDerived(count);
+
+
+  return (
+    <div className="container flex flex-col justify-center items-center">
+        <button 
+          className="my-4 border w-fit p-4" 
+          onClick={() => add()}
+        >
+          Increment Local Counter
+        </button>
+        <h1 className="text-center">
+          This number is: {count}
+        </h1>
+        <button 
+          className="my-4 border w-fit p-4" 
+          onClick={() => setCounter(counter + 1)}
+        >
+          Increment Derived Counter
+        </button>
+        <h1 className="text-center">
+          This number is: {counter}
+        </h1>
+    </div>
+  );
+}
+```
+
+Our app above uses a store and a derivation to manage a pair of counters. We want both the "Increment Local" and "Increment Global" buttons to increase our counter. However when we press "Increase Global" nothing happens! What's the deal?! 
+
+As mentioned before, by default derivations <i>do not</i> reflect updates to any external state (Delta store, React state, etc.). For this reason, we refer to derivations as <i>unlinked</i>. However, we can tell our derivation we want it to listen for and update based on changes to source state by providing a `link()` function as the second argument to the `useDerived()` hook:
+
+```tsx
+
+type Counter = {
+    count: number,
+    increment: () => void
+};
+
+const useCounter = create<Counter>((set, get) => ({
+    count: 0,
+    increment: () => {
+        set({count: get().count + 1})
+    }
+}));
+
+const Counter = () => {
+  
+  const {
+    count,
+    add
+  } = useCounter((state) => ({
+    count: state.count,
+    add: state.increment
+  }));
+
+  const [counter, setCounter] = useDerived(
+    count,
+
+    // Here's our link function, telling our derived counter that any time 
+    // the `count` state upon which it's based receives an update it should
+    // increment it's local count by one.
+
+    (_, next) => next + 1
+  );
+
+
+  return (
+    <div className="container flex flex-col justify-center items-center">
+        <button 
+          className="my-4 border w-fit p-4" 
+          onClick={() => add()}
+        >
+          Increment Local Counter
+        </button>
+        <h1 className="text-center">
+          This number is: {count}
+        </h1>
+        <button 
+          className="my-4 border w-fit p-4" 
+          onClick={() => setCounter(counter + 1)}
+        >
+          Increment Derived Counter
+        </button>
+        <h1 className="text-center">
+          This number is: {counter}
+        </h1>
+    </div>
+  )
+}
+```
+
+A `link()` is a function accepting two arguments - the <i>source state</i> (the external state upon which the derivation is based), and the second the <i>local state</i> the state internal to the derivation itself. Link functions allow you to reconcile the difference between the source and local state of a derivation so that the behavior of your application remains consistent.
+
+#### Stores as Atom Generators 🧪
+
+Stores aren't solely for holding application state - they can also be used to generate derivations on-the-fly!
+
+```tsx
+import { create, useDerived, Derived } from 'delta-state'
+
+interface CounterStore {
+  counterAtom: Derived<number>
+};
+
+const useCounterStore = create<CounterStore>((set) => ({
+  useCounter: useDerived
+}));
+
+export default function CounterApp() {
+
+  const {
+    useCounter
+  } = useCounterStore((state) => ({
+    useCounter: state.useCounter
+  }));
+
+  const [
+    counter,
+    setCounter
+  ] = useCounter(0);
+
+  return (
+    <>
+      <main>
+        <div className="container flex flex-col justify-center items-center">
+          <button className="my-4 border w-fit p-4" onClick={() => setCounter(counter)}>
+            Increment Local Counter
+          </button>
+          <h1 className="text-center">
+            {counter}
+          </h1>
+        </div>
+      </main>
+    </>
+  );
+}
+```
+
+Delta includes the `Derived<T>` type, which allows you to pass the useDerived hook as a store item. You can then create an instance of that derivation wherever needed!
+
+#### Comparators and Controlling State Updates 📡
 
 A store's `subscribe()` method can take an optional `comparator()` function as an argument, which allows you to filter state updates or subscription events:
 
@@ -299,7 +640,8 @@ To access `get()`, just specify it as an argument in addition to `set()`!
 <br/>
 
 ----
-### Use with Suspense 🤖
+
+### Use with Async and Suspense 🤖
 
 Borrowing from Jotai, Delta stores support Suspense and async usage. To enable async usage, you need to pass an async function to the call to `create()` and wrap the store type with a `Promise<T>` generic:
 

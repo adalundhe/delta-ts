@@ -28,3 +28,10 @@ export type StoreSetter<Value> = (
   next: Partial<Value extends PromiseLike<any> ? Awaited<Value> : Value>,
 ) => void;
 export type ReadWrite<V> = (set: StoreSetter<V>, get: StoreGetter<V>) => V;
+export type Derivation<T> = (
+  state: T,
+  link?: (source: T, local: T) => T
+) => [
+  T,
+  (next: T) => void
+]

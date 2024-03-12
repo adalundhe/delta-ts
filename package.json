@@ -1,6 +1,6 @@
 {
   "name": "delta-state",
-  "version": "1.11.1",
+  "version": "1.12.0",
   "description": "A modern version of the Delta state manager - written for TS and with the use of React Hooks.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -49,7 +49,6 @@
   "devDependencies": {
     "@types/node": "^20.11.20",
     "@types/react": "^18.2.57",
-    "@types/use-sync-external-store": "^0.0.6",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
     "@vitejs/plugin-react": "^4.2.1",
     "eslint": "^8.56.0",
@@ -69,8 +68,7 @@
   },
   "dependencies": {
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "use-sync-external-store": "^1.2.0"
+    "react-dom": "^18.2.0"
   },
   "files": [
     "dist"
